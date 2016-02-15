@@ -11,12 +11,11 @@
 
 class StudentWorld : public GameWorld {
 public:
-    StudentWorld(std::string assetDir)
-            : GameWorld(assetDir) {
-    }
+    StudentWorld(std::string assetDir);
 
 
     virtual int init() {
+
         return GWSTATUS_CONTINUE_GAME;
     }
 
@@ -31,8 +30,9 @@ public:
     }
 
 private:
-    std::vector m_objects<Actor>;
-    FrackMan m_fm;
+    std::vector<Actor> m_objects;
+    FrackMan *m_fm;
+    Dirt *m_dirt;
 };
 
 #endif // STUDENTWORLD_H_
