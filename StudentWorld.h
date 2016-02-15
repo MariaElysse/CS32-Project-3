@@ -3,7 +3,9 @@
 
 #include "GameWorld.h"
 #include "GameConstants.h"
+#include "Actor.h"
 #include <string>
+#include <vector>
 
 // Students:  Add code to this file, StudentWorld.cpp, Actor.h, and Actor.cpp
 
@@ -12,6 +14,7 @@ public:
     StudentWorld(std::string assetDir)
             : GameWorld(assetDir) {
     }
+
 
     virtual int init() {
         return GWSTATUS_CONTINUE_GAME;
@@ -28,6 +31,8 @@ public:
     }
 
 private:
+    std::vector m_objects<Actor>;
+    FrackMan m_fm;
 };
 
 #endif // STUDENTWORLD_H_
