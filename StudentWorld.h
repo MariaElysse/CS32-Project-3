@@ -3,6 +3,7 @@
 
 #include "GameWorld.h"
 #include "GameConstants.h"
+#include "GraphObject.h"
 #include <string>
 #include <vector>
 
@@ -23,10 +24,15 @@ public:
 
     virtual void cleanUp();
 
+    void deleteDirtAt(int x, int y);
+
+    bool validMovement(int &x, int &y, GraphObject::Direction);
 private:
     std::vector<Actor *> m_objects;
     FrackMan *m_fm;
     Dirt *m_dirt[VIEW_HEIGHT][VIEW_WIDTH];
+
+    void clearDead();
 };
 
 #endif // STUDENTWORLD_H_

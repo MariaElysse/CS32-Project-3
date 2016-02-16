@@ -29,6 +29,9 @@ class Actor : public GraphObject {
 public:
     Actor(int imageID, int startX, int startY, Direction startDir, float size, unsigned int depth, StudentWorld *sw);
 
+    virtual void markRemoved();
+
+    virtual bool toBeRemoved();
     virtual ~Actor();
 
     virtual void doSomething() = 0;
@@ -36,6 +39,7 @@ public:
     StudentWorld *getWorld(void);
 private:
     StudentWorld *m_world;
+    bool m_toBeRemoved;
 };
 
 class Person : public Actor {
@@ -84,7 +88,6 @@ public:
 class Dirt : public Actor {
 public:
     Dirt(int locX, int locY, StudentWorld *sw);
-
     void doSomething();
 
 };

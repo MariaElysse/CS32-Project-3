@@ -5,7 +5,7 @@
 //Actor
 Actor::Actor(int imageID, int startX, int startY, GraphObject::Direction startDir, float size, unsigned int depth,
              StudentWorld *sw)
-        : GraphObject(imageID, startX, startY, startDir, size, depth), m_world(sw) {
+        : GraphObject(imageID, startX, startY, startDir, size, depth), m_world(sw), m_toBeRemoved(false) {
 
 }
 
@@ -33,29 +33,35 @@ void FrackMan::doSomething() {
     int keyp;
     if (!getWorld()->getKey(keyp))
         return;
-
+    int newX = getX();
+    int newY = getY();
+    GraphObject::Direction dir;
     switch (keyp) {
         case KEY_PRESS_LEFT:
-            if (getX() > 4)
-                moveTo(getX() - 4, getY());
+            dir = GraphObject::left;
             setDirection(left);
             break;
         case KEY_PRESS_RIGHT:
-            if (getX() < 60)
-                moveTo(getX() + 4, getY());
+            dir = GraphObject::right;
             setDirection(right);
             break;
         case KEY_PRESS_UP:
-            if (getY() < 60)
-                moveTo(getX(), getY() + 4);
+            dir = GraphObject::up;
             setDirection(up);
             break;
         case KEY_PRESS_DOWN:
-            if (getY() > 4)
-                moveTo(getX(), getY() - 4);
+            dir = GraphObject::down;
             setDirection(down);
             break;
+        default:
+            dir = GraphObject::none;
+            break;
     }
+    getWorld()->validMovement(newX, newY, dir);
+    moveTo(newX, newY);
+    getWorld()->deleteDirtAt(newX, newY);
+
+
 }
 //OilBarrel
 OilBarrel::OilBarrel(int locX, int locY, StudentWorld *sw)
@@ -88,4 +94,13 @@ Dirt::Dirt(int locX, int locY, StudentWorld *sw)
 
 StudentWorld *Actor::getWorld(void) {
     return m_world;
+}
+
+void Actor::markRemoved() {
+    m_toBeRemoved = true;
+    this->setVisible(false);
+}
+
+bool Actor::toBeRemoved() {
+    return m_toBeRemoved;
 }
