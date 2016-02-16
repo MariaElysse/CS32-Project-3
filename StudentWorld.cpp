@@ -1,6 +1,5 @@
 #include "StudentWorld.h"
 #include "Actor.h"
-#include <string>
 
 using namespace std;
 
@@ -9,7 +8,7 @@ GameWorld *createStudentWorld(string assetDir) {
 }
 
 // Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
-StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir) {
+StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), thing_deleted(false) {
     //add to vector m_objects
     //set up dirt
 }
@@ -61,6 +60,9 @@ int StudentWorld::move() {
 }
 
 void StudentWorld::clearDead() {
+    if (!thing_deleted) //allows for lazy evaluation, and the game to not be slow as molasses
+        return; //very important to set this every time you call Actor::markRemoved()
+    thing_deleted = false;
     //delete all the objects marked as dead.
     for (int i = 0; i < m_objects.size(); i++) {
         Actor *object = m_objects[i];
@@ -71,15 +73,11 @@ void StudentWorld::clearDead() {
         }
         delete tmp;
     }
-    for (int i = 0; i < VIEW_HEIGHT; i++) {
-        for (int j = 0; j < VIEW_WIDTH; j++) {
-            if (!m_dirt[i][j])
-                continue;
-            if (m_dirt[i][j]->toBeRemoved()) {
-                delete m_dirt[i][j];
-                m_dirt[i][j] = nullptr;
-            }
-        }
+    while (!dirtToBeDeleted.empty()) { //removed a nested for loop: winning.
+        StudentWorld::IntPair toDelete = dirtToBeDeleted.top();
+        dirtToBeDeleted.pop();
+        delete m_dirt[toDelete.i][toDelete.j];
+        m_dirt[toDelete.i][toDelete.j] = nullptr;
     }
 }
 
@@ -118,15 +116,21 @@ bool StudentWorld::validMovement(int &x, int &y, GraphObject::Direction directio
     return false;
 }
 
-void StudentWorld::deleteDirtAt(int x, int y) {
+void StudentWorld::deleteDirtAt(int x, int y) { //this can be made4x faster
+// by only erasing the dirt I'mwaslking into
     //eraseall the dirt that the FrackMan is standing on
     //or,more generally, erase all the dirt in a 4x4 square
     // given by its bottom-right coordinate, x,y
     for (int i = x + 3; i >= x; i--) {
         for (int j = y + 3; j >= y; j--) {
-            if (i >= 0 && j >= 0 && m_dirt[i][j]) {
+            if (m_dirt[i][j] && i >= 0 && j >= 0) {
                 m_dirt[i][j]->markRemoved();
+                IntPair toDelete;
+                toDelete.i = i;
+                toDelete.j = j;
+                dirtToBeDeleted.push(toDelete);
             }
         }
     }
+    thing_deleted = true;
 }

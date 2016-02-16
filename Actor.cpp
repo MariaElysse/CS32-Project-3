@@ -67,7 +67,6 @@ void FrackMan::doSomething() {
 OilBarrel::OilBarrel(int locX, int locY, StudentWorld *sw)
         : Discovery(IID_BARREL, locX, locY, sw) {
     setVisible(false);
-
 }
 
 void OilBarrel::doSomething() {

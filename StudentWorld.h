@@ -6,7 +6,7 @@
 #include "GraphObject.h"
 #include <string>
 #include <vector>
-
+#include <stack>
 class Actor;
 class Dirt;
 class FrackMan;
@@ -28,10 +28,15 @@ public:
 
     bool validMovement(int &x, int &y, GraphObject::Direction);
 private:
+    struct IntPair {
+        int i;
+        int j;
+    };
     std::vector<Actor *> m_objects;
     FrackMan *m_fm;
     Dirt *m_dirt[VIEW_HEIGHT][VIEW_WIDTH];
-
+    bool thing_deleted;
+    std::stack<IntPair> dirtToBeDeleted; //[i][j] values for the dirt that is to be deleted in the next tick.
     void clearDead();
 };
 
