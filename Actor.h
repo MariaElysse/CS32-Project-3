@@ -50,8 +50,7 @@ class FrackMan : public Person {
 public:
     FrackMan(StudentWorld *sw);
 
-    void doSomething() { }
-
+    void doSomething();
 private:
     int m_water;
     int m_sonar;

@@ -29,6 +29,34 @@ FrackMan::FrackMan(StudentWorld *sw)
           m_gold(0), m_sonar(1), m_water(5) {
 }
 
+void FrackMan::doSomething() {
+    int keyp;
+    if (!getWorld()->getKey(keyp))
+        return;
+
+    switch (keyp) {
+        case KEY_PRESS_LEFT:
+            if (getX() > 4)
+                moveTo(getX() - 4, getY());
+            setDirection(left);
+            break;
+        case KEY_PRESS_RIGHT:
+            if (getX() < 60)
+                moveTo(getX() + 4, getY());
+            setDirection(right);
+            break;
+        case KEY_PRESS_UP:
+            if (getY() < 60)
+                moveTo(getX(), getY() + 4);
+            setDirection(up);
+            break;
+        case KEY_PRESS_DOWN:
+            if (getY() > 4)
+                moveTo(getX(), getY() - 4);
+            setDirection(down);
+            break;
+    }
+}
 //OilBarrel
 OilBarrel::OilBarrel(int locX, int locY, StudentWorld *sw)
         : Discovery(IID_BARREL, locX, locY, sw) {
