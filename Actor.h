@@ -2,7 +2,10 @@
 #define ACTOR_H_
 
 #include "GraphObject.h"
+#include "StudentWorld.h"
 
+//#include "StudentWorld.h"
+class StudentWorld;
 const int FRACKMAN_START_X = 30;
 const int FRACKMAN_START_Y = 60;
 const int FRACKMAN_HITPOINTS = 10;
@@ -24,19 +27,20 @@ const int BACKGROUND = 3;
 
 class Actor : public GraphObject {
 public:
-    Actor(int imageID, int startX, int startY, Direction startDir, float size, unsigned int depth);
+    Actor(int imageID, int startX, int startY, Direction startDir, float size, unsigned int depth, StudentWorld *sw);
 
     virtual ~Actor();
 
     virtual void doSomething() = 0;
 
+    StudentWorld *getWorld(void);
 private:
-
+    StudentWorld *m_world;
 };
 
 class Person : public Actor {
 public:
-    Person(int imageId, int startX, int startY, Direction startDir, int hitPoints);
+    Person(int imageId, int startX, int startY, Direction startDir, int hitPoints, StudentWorld *sw);
 
 private:
     int m_hitPoints;
@@ -44,7 +48,7 @@ private:
 
 class FrackMan : public Person {
 public:
-    FrackMan();
+    FrackMan(StudentWorld *sw);
 
     void doSomething() { }
 
@@ -55,12 +59,14 @@ private:
 };
 
 class Protestor : public Person {
-    Protestor(int imageId, int startX, int startY);
+public:
+    Protestor(int imageId, int startX, int startY, StudentWorld *sw);
+
 };
 
 class Discovery : public Actor { //oil, gold, SONAR kit, Water.
 public:
-    Discovery(int imageId, int locX, int locY);
+    Discovery(int imageId, int locX, int locY, StudentWorld *sw);
 
     virtual void doSomething() = 0;
 
@@ -71,14 +77,14 @@ public:
 
 class OilBarrel : public Discovery {
 public:
-    OilBarrel(int locX, int locY);
+    OilBarrel(int locX, int locY, StudentWorld *sw);
 
     void doSomething();
 };
 
 class Dirt : public Actor {
 public:
-    Dirt(int locX, int locY);
+    Dirt(int locX, int locY, StudentWorld *sw);
 
     void doSomething();
 
