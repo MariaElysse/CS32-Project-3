@@ -27,7 +27,10 @@ public:
     void deleteDirtAt(int x, int y);
 
     bool validMovement(int &x, int &y, GraphObject::Direction);
+
+    void clearDead();
 private:
+    std::string setDisplayText(void);
     struct IntPair {
         IntPair(int i, int j) : i(i), j(j) { }
         int i;
@@ -38,7 +41,6 @@ private:
     Dirt *m_dirt[VIEW_HEIGHT][VIEW_WIDTH];
     bool thing_deleted;
     std::stack<IntPair> dirtToBeDeleted; //[i][j] values for the dirt that is to be deleted in the next tick.
-    void clearDead();
 };
 
 #endif // STUDENTWORLD_H_

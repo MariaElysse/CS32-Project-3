@@ -18,8 +18,8 @@ const int DISCOVERY_DEPTH = 2;
 const GraphObject::Direction DISCOVERY_START_DIR = GraphObject::right;
 
 const GraphObject::Direction PROTESTER_START_DIR = GraphObject::left;
-const int PROTESTOR_START_HITPOINTS = 5;
-const int HARDCORE_PROTESTOR_HITPOINTS = 20;
+const int PROTESTER_START_HITPOINTS = 5;
+const int HARDCORE_PROTESTER_HITPOINTS = 20;
 const GraphObject::Direction DIRT_DIR = GraphObject::right;
 const float DIRT_SIZE = 0.25;
 const int BACKGROUND = 3;
@@ -61,9 +61,9 @@ private:
     int m_gold;
 };
 
-class Protestor : public Person {
+class Protester : public Person {
 public:
-    Protestor(int imageId, int startX, int startY, StudentWorld *sw);
+    Protester(int imageId, int startX, int startY, StudentWorld *sw);
 
 };
 

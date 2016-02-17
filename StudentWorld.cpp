@@ -55,7 +55,6 @@ int StudentWorld::move() {
     // Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
     // decLives();
     m_fm->doSomething();
-    clearDead();
     //int val;
     /*if (getLives()<=0)
         return GWSTATUS_PLAYER_DIED;
@@ -79,7 +78,7 @@ void StudentWorld::clearDead() {
     }
     while (!dirtToBeDeleted.empty()) { //removed a nested for loop: winning.
         StudentWorld::IntPair toDelete = dirtToBeDeleted.top();
-        dirtToBeDeleted.pop();
+        dirtToBeDeleted.pop(); //everything inside of the stack is to be deleted
         delete m_dirt[toDelete.i][toDelete.j];
         m_dirt[toDelete.i][toDelete.j] = nullptr;
     }
@@ -138,4 +137,10 @@ void StudentWorld::deleteDirtAt(int x, int y) { //this can be made 4x faster
         }
     }
     thing_deleted = true;
+    playSound(SOUND_DIG);
+}
+
+std::string StudentWorld::setDisplayText(void) {
+    //return std::string()
+    //return __cxx11::basic_string<char, char_traits<_CharT>, allocator<_CharT>>();
 }

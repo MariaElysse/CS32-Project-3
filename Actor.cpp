@@ -1,5 +1,4 @@
 #include "Actor.h"
-#include "StudentWorld.h"
 
 // Students:  Add code to this file (if you wish), Actor.h, StudentWorld.h, and StudentWorld.cpp
 //Actor
@@ -31,12 +30,16 @@ FrackMan::FrackMan(StudentWorld *sw)
 
 void FrackMan::doSomething() {
     int keyp;
-    if (!getWorld()->getKey(keyp))
-        return;
     int newX = getX();
     int newY = getY();
+    getWorld()->deleteDirtAt(newX, newY);
+    if (!getWorld()->getKey(keyp)) {//If I don't get a keypress, then nothing's going on
+        getWorld()->clearDead(); //and I can delete all the garbage I've been saving up
+        return; //and quit early.
+    }
+
     GraphObject::Direction dir;
-    switch (keyp) {
+    switch (keyp) { //select the direction we wish to go. Also set the frackman's direction.
         case KEY_PRESS_LEFT:
             dir = GraphObject::left;
             setDirection(left);
@@ -55,13 +58,10 @@ void FrackMan::doSomething() {
             break;
         default:
             dir = GraphObject::none;
-            break;
+            break; //???how??? did you get here???
     }
     getWorld()->validMovement(newX, newY, dir);
     moveTo(newX, newY);
-    getWorld()->deleteDirtAt(newX, newY);
-
-
 }
 //OilBarrel
 OilBarrel::OilBarrel(int locX, int locY, StudentWorld *sw)
@@ -71,15 +71,14 @@ OilBarrel::OilBarrel(int locX, int locY, StudentWorld *sw)
 
 void OilBarrel::doSomething() {
     if (!this->isAlive())
-
-        return;
+        return; //well if it's dead I don't really expect a lot out of it.
 
 }
 
 
-//Protestor
-Protestor::Protestor(int imageId, int startX, int startY, StudentWorld *sw)
-        : Person(imageId, startX, startY, PROTESTER_START_DIR, PROTESTOR_START_HITPOINTS, sw) {
+//Protester - incidentally, these were initially named "Protestors", as the git history can tell you.
+Protester::Protester(int imageId, int startX, int startY, StudentWorld *sw)
+        : Person(imageId, startX, startY, PROTESTER_START_DIR, PROTESTER_START_HITPOINTS, sw) {
 
 }
 
