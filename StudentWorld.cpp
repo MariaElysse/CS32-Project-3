@@ -31,18 +31,22 @@ int StudentWorld::init() {
 
 StudentWorld::~StudentWorld() { //erase all the dirt. et cetera.
     cleanUp();
-    delete m_fm;
-    m_fm = nullptr;
-
 }
 
-void StudentWorld::cleanUp() { //erase all the dirt.
+void StudentWorld::cleanUp() { //erase all the dirt. Erase all the items. Erase the FrackMan
+    while (m_objects.size()) {
+        Actor *tmp = m_objects.at(0);
+        m_objects.erase(m_objects.begin());
+        delete tmp;
+    }
     for (int i = 0; i < VIEW_WIDTH; i++) {
         for (int j = 0; j < VIEW_HEIGHT; j++) {
             delete m_dirt[i][j];
             m_dirt[i][j] = nullptr;
         }
     }
+    delete m_fm;
+    m_fm = nullptr;
 }
 
 int StudentWorld::move() {
@@ -69,9 +73,9 @@ void StudentWorld::clearDead() {
         Actor *tmp = object;
         if (object->toBeRemoved()) {
             m_objects.erase(m_objects.begin() + i);
+            delete tmp;
             //TODO: fix this shit to actually use a god damn iterator
         }
-        delete tmp;
     }
     while (!dirtToBeDeleted.empty()) { //removed a nested for loop: winning.
         StudentWorld::IntPair toDelete = dirtToBeDeleted.top();
@@ -116,18 +120,19 @@ bool StudentWorld::validMovement(int &x, int &y, GraphObject::Direction directio
     return false;
 }
 
-void StudentWorld::deleteDirtAt(int x, int y) { //this can be made4x faster
-// by only erasing the dirt I'mwaslking into
-    //eraseall the dirt that the FrackMan is standing on
+void StudentWorld::deleteDirtAt(int x, int y) { //this can be made 4x faster
+// by only erasing the dirt I'm walking into
+    //erase all the dirt that the FrackMan is standing on
     //or,more generally, erase all the dirt in a 4x4 square
     // given by its bottom-right coordinate, x,y
+
     for (int i = x + 3; i >= x; i--) {
         for (int j = y + 3; j >= y; j--) {
-            if (m_dirt[i][j] && i >= 0 && j >= 0) {
+            if (!m_dirt[i][j])
+                continue;
+            if (i >= 0 && j >= 0) {
                 m_dirt[i][j]->markRemoved();
-                IntPair toDelete;
-                toDelete.i = i;
-                toDelete.j = j;
+                IntPair toDelete(i, j);
                 dirtToBeDeleted.push(toDelete);
             }
         }

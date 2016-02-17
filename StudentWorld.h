@@ -29,6 +29,7 @@ public:
     bool validMovement(int &x, int &y, GraphObject::Direction);
 private:
     struct IntPair {
+        IntPair(int i, int j) : i(i), j(j) { }
         int i;
         int j;
     };
