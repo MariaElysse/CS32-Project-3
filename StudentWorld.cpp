@@ -141,6 +141,7 @@ void StudentWorld::deleteDirtAt(int x, int y) { //this can be made 4x faster
 }
 
 std::string StudentWorld::setDisplayText(void) {
+
     //return std::string()
     //return __cxx11::basic_string<char, char_traits<_CharT>, allocator<_CharT>>();
 }

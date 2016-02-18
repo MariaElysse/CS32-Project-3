@@ -29,6 +29,16 @@ public:
     bool validMovement(int &x, int &y, GraphObject::Direction);
 
     void clearDead();
+
+    int getScore();
+
+    void incScore(int amount);
+
+    void resetScore();
+
+    int getLevel(); //on my
+    void incLevel();
+
 private:
     std::string setDisplayText(void);
     struct IntPair {
@@ -36,6 +46,10 @@ private:
         int i;
         int j;
     };
+
+    int m_score;
+    int m_level;
+    int m_barrelsRemaining;
     std::vector<Actor *> m_objects;
     FrackMan *m_fm;
     Dirt *m_dirt[VIEW_HEIGHT][VIEW_WIDTH];

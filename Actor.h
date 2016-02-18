@@ -59,6 +59,8 @@ private:
     int m_water;
     int m_sonar;
     int m_gold;
+    int m_lives;
+    int m_health;
 };
 
 class Protester : public Person {
