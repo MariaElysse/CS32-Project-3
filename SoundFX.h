@@ -67,6 +67,18 @@ class SoundFXController
     static SoundFXController& getInstance();
 };
 
+#elif defined(__GNUC__)
+
+class SoundFXController {
+public:
+    void playClip(std::string soundFile) {
+        std::system(("/usr/bin/aplay -q \"" + soundFile + "\" &").c_str());
+    }
+
+    void abortClip() { }
+
+    static SoundFXController &getInstance();
+};
 #else  // forget about sound
 
 class SoundFXController {
