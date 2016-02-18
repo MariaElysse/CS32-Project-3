@@ -127,22 +127,24 @@ void StudentWorld::deleteDirtAt(int x, int y) { //this can be made 4x faster
         for (int j = y + 3; j >= y; j--) {
             if (!m_dirt[i][j])
                 continue;
+            if (m_dirt[i][j]->toBeRemoved())
+                continue;
             if (i >= 0 && j >= 0) {
                 m_dirt[i][j]->markRemoved();
                 IntPair toDelete(i, j);
                 dirtToBeDeleted.push(toDelete);
                 dirt_deleted = true;
-
             }
         }
     }
     thing_deleted = true;
-    if (dirt_deleted)
+    if (dirt_deleted) {
         playSound(SOUND_DIG);
+    }
 }
 
 std::string StudentWorld::setDisplayText(void) {
-
+    return std::string("");
     //return std::string()
     //return __cxx11::basic_string<char, char_traits<_CharT>, allocator<_CharT>>();
 }
