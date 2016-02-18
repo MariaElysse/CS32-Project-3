@@ -4,7 +4,6 @@
 #include "GraphObject.h"
 #include "StudentWorld.h"
 
-//#include "StudentWorld.h"
 class StudentWorld;
 const int FRACKMAN_START_X = 30;
 const int FRACKMAN_START_Y = 60;

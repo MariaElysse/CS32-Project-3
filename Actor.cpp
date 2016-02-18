@@ -37,7 +37,6 @@ void FrackMan::doSomething() {
         getWorld()->clearDead(); //and I can delete all the garbage I've been saving up
         return; //and quit early.
     }
-
     GraphObject::Direction dir;
     switch (keyp) { //select the direction we wish to go. Also set the frackman's direction.
         case KEY_PRESS_LEFT:
@@ -77,6 +76,8 @@ void OilBarrel::doSomething() {
 
 
 //Protester - incidentally, these were initially named "Protestors", as the git history can tell you.
+//post-post script Protestor is actually a valid spelling and I want to change it back,
+//but I also really want that interview with Symantec
 Protester::Protester(int imageId, int startX, int startY, StudentWorld *sw)
         : Person(imageId, startX, startY, PROTESTER_START_DIR, PROTESTER_START_HITPOINTS, sw) {
 
@@ -85,11 +86,13 @@ Protester::Protester(int imageId, int startX, int startY, StudentWorld *sw)
 //Dirt
 void Dirt::doSomething() { } //dirt does nothing
 
+//Dirt, when made, sits there and is dirt
 Dirt::Dirt(int locX, int locY, StudentWorld *sw)
         : Actor(IID_DIRT, locX, locY, DIRT_DIR, DIRT_SIZE, BACKGROUND, sw) {
     setVisible(true);
 }
 
+//The World Is Not Enough
 StudentWorld *Actor::getWorld(void) {
     return m_world;
 }

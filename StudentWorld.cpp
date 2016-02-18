@@ -18,7 +18,7 @@ int StudentWorld::init() {
     m_fm = new FrackMan(this);
     for (int i = 0; i < VIEW_WIDTH; i++) { //fill the entire world with dirt (me_irl)
         for (int j = 0; j < VIEW_HEIGHT; j++) {
-            if (j < (VIEW_HEIGHT - SPRITE_HEIGHT) && (i < 29 || i > 32)) //except the column in the centre
+            if (j < (VIEW_HEIGHT - SPRITE_HEIGHT) && (i < 30 || i > 33)) //except the column in the centre
                 m_dirt[i][j] = new Dirt(i, j, this);
             else
                 m_dirt[i][j] = nullptr;
@@ -34,8 +34,8 @@ StudentWorld::~StudentWorld() { //erase all the dirt. et cetera.
 }
 
 void StudentWorld::cleanUp() { //erase all the dirt. Erase all the items. Erase the FrackMan
-    while (m_objects.size()) {
-        Actor *tmp = m_objects.at(0);
+    while (!m_objects.empty()) {
+        Actor *tmp = *(m_objects.begin());
         m_objects.erase(m_objects.begin());
         delete tmp;
     }
@@ -67,13 +67,11 @@ void StudentWorld::clearDead() {
         return; //very important to set this every time you call Actor::markRemoved()
     thing_deleted = false;
     //delete all the objects marked as dead.
-    for (int i = 0; i < m_objects.size(); i++) {
-        Actor *object = m_objects[i];
-        Actor *tmp = object;
-        if (object->toBeRemoved()) {
-            m_objects.erase(m_objects.begin() + i);
+    for (std::list<Actor *>::iterator i = m_objects.begin(); !m_objects.empty(); i++) {
+        Actor *tmp = *i;
+        if (tmp->toBeRemoved()) {
+            m_objects.erase(i);
             delete tmp;
-            //TODO: fix this shit to actually use a god damn iterator
         }
     }
     while (!dirtToBeDeleted.empty()) { //removed a nested for loop: winning.

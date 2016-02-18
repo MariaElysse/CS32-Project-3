@@ -5,7 +5,7 @@
 #include "GameConstants.h"
 #include "GraphObject.h"
 #include <string>
-#include <vector>
+#include <list>
 #include <stack>
 class Actor;
 class Dirt;
@@ -50,7 +50,7 @@ private:
     int m_score;
     int m_level;
     int m_barrelsRemaining;
-    std::vector<Actor *> m_objects;
+    std::list<Actor *> m_objects;
     FrackMan *m_fm;
     Dirt *m_dirt[VIEW_HEIGHT][VIEW_WIDTH];
     bool thing_deleted;
