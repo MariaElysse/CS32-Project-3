@@ -122,7 +122,7 @@ void StudentWorld::deleteDirtAt(int x, int y) { //this can be made 4x faster
     //erase all the dirt that the FrackMan is standing on
     //or,more generally, erase all the dirt in a 4x4 square
     // given by its bottom-right coordinate, x,y
-
+    bool dirt_deleted = false;
     for (int i = x + 3; i >= x; i--) {
         for (int j = y + 3; j >= y; j--) {
             if (!m_dirt[i][j])
@@ -131,11 +131,14 @@ void StudentWorld::deleteDirtAt(int x, int y) { //this can be made 4x faster
                 m_dirt[i][j]->markRemoved();
                 IntPair toDelete(i, j);
                 dirtToBeDeleted.push(toDelete);
+                dirt_deleted = true;
+
             }
         }
     }
     thing_deleted = true;
-    playSound(SOUND_DIG);
+    if (dirt_deleted)
+        playSound(SOUND_DIG);
 }
 
 std::string StudentWorld::setDisplayText(void) {
