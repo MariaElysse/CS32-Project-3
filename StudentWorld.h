@@ -37,6 +37,7 @@ public:
     void resetScore();
 
     int getLevel(); //on my
+
     void incLevel();
 
 private:

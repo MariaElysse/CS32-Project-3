@@ -105,3 +105,5 @@ void Actor::markRemoved() {
 bool Actor::toBeRemoved() {
     return m_toBeRemoved;
 }
+
+Dirt::~Dirt() {}

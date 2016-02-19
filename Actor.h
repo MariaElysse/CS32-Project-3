@@ -90,7 +90,7 @@ class Dirt : public Actor {
 public:
     Dirt(int locX, int locY, StudentWorld *sw);
     void doSomething();
-
+    ~Dirt();
 };
 #endif // ACTOR_H_
 
