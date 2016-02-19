@@ -86,6 +86,7 @@ void StudentWorld::clearDead() {
 bool StudentWorld::validMovement(int &x, int &y, GraphObject::Direction direction) {
     //determine if a Person at a particular place can make a particular movement.
     //the integers passed in by reference actually change, to represent the movement.
+    //this should be in Actor, and, actually, for Part 2, it will be.
     switch (direction) {
         case GraphObject::up:
             if (y < VIEW_HEIGHT - SPRITE_HEIGHT) {
@@ -147,4 +148,24 @@ std::string StudentWorld::setDisplayText(void) {
     return std::string("");
     //return std::string()
     //return __cxx11::basic_string<char, char_traits<_CharT>, allocator<_CharT>>();
+}
+
+int StudentWorld::getScore() {
+    return m_score;
+}
+
+void StudentWorld::incScore(int amount) {
+    m_score = m_score + amount;
+}
+
+void StudentWorld::resetScore() {
+    m_score = 0;
+}
+
+int StudentWorld::getLevel() {
+    return m_level;
+}
+
+void StudentWorld::incLevel() {
+    ++m_level;
 }
