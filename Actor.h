@@ -8,6 +8,9 @@ class StudentWorld;
 const int FRACKMAN_START_X = 30;
 const int FRACKMAN_START_Y = 60;
 const int FRACKMAN_HITPOINTS = 10;
+const int FRACKMAN_START_WATER = 5;
+const int FRACKMAN_START_SONAR = 1;
+const int FRACKMAN_START_GOLD = 0;
 const GraphObject::Direction FRACKMAN_START_DIR = GraphObject::right;
 
 const float DEFAULT_SIZE = 1.0;
@@ -19,9 +22,13 @@ const GraphObject::Direction DISCOVERY_START_DIR = GraphObject::right;
 const GraphObject::Direction PROTESTER_START_DIR = GraphObject::left;
 const int PROTESTER_START_HITPOINTS = 5;
 const int HARDCORE_PROTESTER_HITPOINTS = 20;
+
 const GraphObject::Direction DIRT_DIR = GraphObject::right;
 const float DIRT_SIZE = 0.25;
 const int BACKGROUND = 3;
+
+const float SQUIRT_SIZE = 1.0;
+const int SQUIRT_DEPTH = 1;
 // Students:  Add code to this file, Actor.cpp, StudentWorld.h, and StudentWorld.cpp
 
 class Actor : public GraphObject {
@@ -29,12 +36,11 @@ public:
     Actor(int imageID, int startX, int startY, Direction startDir, float size, unsigned int depth, StudentWorld *sw);
 
     virtual void markRemoved();
-
     virtual bool toBeRemoved();
     virtual ~Actor();
-
     virtual void doSomething() = 0;
 
+    virtual bool obstructsProtesters(int x, int y);
     StudentWorld *getWorld(void);
 private:
     StudentWorld *m_world;
@@ -45,6 +51,11 @@ class Person : public Actor {
 public:
     Person(int imageId, int startX, int startY, Direction startDir, int hitPoints, StudentWorld *sw);
 
+    virtual bool obstructsProtesters(int x, int y);
+
+    virtual int getHealth();
+
+    virtual void hurt(int damage);
 private:
     int m_hitPoints;
 };
@@ -59,13 +70,11 @@ private:
     int m_sonar;
     int m_gold;
     int m_lives;
-    int m_health;
 };
 
 class Protester : public Person {
 public:
     Protester(int imageId, int startX, int startY, StudentWorld *sw);
-
 };
 
 class Discovery : public Actor { //oil, gold, SONAR kit, Water.
@@ -77,6 +86,8 @@ public:
     virtual bool isAlive() = 0;
 
     virtual ~Discovery() { };
+
+    virtual bool obstructsProtesters(int x, int y);
 };
 
 class OilBarrel : public Discovery {
@@ -90,7 +101,17 @@ class Dirt : public Actor {
 public:
     Dirt(int locX, int locY, StudentWorld *sw);
     void doSomething();
+
+    bool obstructsProtesters(int x, int y);
     ~Dirt();
+};
+
+class Squirt : public Actor {
+public:
+    Squirt(int startX, int startY, GraphObject::Direction dir, StudentWorld *sw);
+
+private:
+    int m_distanceRemaining;
 };
 #endif // ACTOR_H_
 

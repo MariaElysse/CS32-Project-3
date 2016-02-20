@@ -25,7 +25,7 @@ Discovery::Discovery(int imageId, int locX, int locY, StudentWorld *sw)
 //FrackMan
 FrackMan::FrackMan(StudentWorld *sw)
         : Person(IID_PLAYER, FRACKMAN_START_X, FRACKMAN_START_Y, FRACKMAN_START_DIR, FRACKMAN_HITPOINTS, sw),
-          m_gold(0), m_sonar(1), m_water(5) {
+          m_gold(FRACKMAN_START_GOLD), m_sonar(FRACKMAN_START_SONAR), m_water(FRACKMAN_START_WATER) {
 }
 
 void FrackMan::doSomething() {
@@ -41,25 +41,23 @@ void FrackMan::doSomething() {
     switch (keyp) { //select the direction we wish to go. Also set the frackman's direction.
         case KEY_PRESS_LEFT:
             dir = GraphObject::left;
-            setDirection(left);
             break;
         case KEY_PRESS_RIGHT:
             dir = GraphObject::right;
-            setDirection(right);
             break;
         case KEY_PRESS_UP:
             dir = GraphObject::up;
-            setDirection(up);
             break;
         case KEY_PRESS_DOWN:
             dir = GraphObject::down;
-            setDirection(down);
             break;
         default:
             dir = GraphObject::none;
             break; //???how??? did you get here???
     }
-    getWorld()->validMovement(newX, newY, dir);
+    if (dir == getDirection())
+        getWorld()->validMovement(newX, newY, dir);
+    setDirection(dir);
     moveTo(newX, newY);
 }
 //OilBarrel
@@ -107,3 +105,42 @@ bool Actor::toBeRemoved() {
 }
 
 Dirt::~Dirt() {}
+
+Squirt::Squirt(int startX, int startY, GraphObject::Direction dir, StudentWorld *sw)
+        : Actor(IID_WATER_SPURT, startX, startY, dir, SQUIRT_SIZE, SQUIRT_DEPTH, sw) {
+
+}
+
+bool Actor::obstructsProtesters(int x, int y) {
+    //if it obstructs the movement of the Protestors
+    int tmpX = getX() - x;
+    int tmpY = getY() - y;
+    return tmpX < SPRITE_WIDTH && tmpX > 0 && tmpY < SPRITE_HEIGHT && tmpY > 0;
+    //if tmpX in [0..3] and tmpY in [0..3], the object is blocking the way of the protesters/FrackMan.
+    // the "object", of course being just boulders.
+}
+
+bool Dirt::obstructsProtesters(int x, int y) {
+    return (x == getX() && y == getY());
+} //dirt obstructs the protesters, but only in its small square.
+
+bool Discovery::obstructsProtesters(int x, int y) {
+    return false;
+} //Protesters' pathing isn't blocked by discoveries.
+
+bool Person::obstructsProtesters(int x, int y) {
+    return false;
+    //Protesters' pathing isn't blocked by each other.
+    //They have special interactions with the FrackMan, though I can't see why they would not
+    // be allowed to walk through him, they just (should) never actually try to.
+    //Also, the FrackMan can pass through protesters.
+}
+
+
+int Person::getHealth() {
+    return m_hitPoints;
+}
+
+void Person::hurt(int damage) {
+    m_hitPoints -= damage;
+}

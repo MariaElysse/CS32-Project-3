@@ -11,6 +11,9 @@ class Actor;
 class Dirt;
 class FrackMan;
 // Students:  Add code to this file, StudentWorld.cpp, Actor.h, and Actor.cpp
+const int MINESHAFT_LEFT_WALL_COL = 30;
+const int MINESHAFT_RIGHT_WALL_COL = 33;
+const int MINESHAFT_BOTTOM_ROW = 4;
 
 class StudentWorld : public GameWorld {
 public:
@@ -39,6 +42,8 @@ public:
     int getLevel(); //on my
 
     void incLevel();
+
+    bool dirtOrBoulderAt(int x, int y);
 
 private:
     std::string setDisplayText(void);

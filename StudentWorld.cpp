@@ -18,11 +18,12 @@ int StudentWorld::init() {
     m_fm = new FrackMan(this);
     for (int i = 0; i < VIEW_WIDTH; i++) { //fill the entire world with dirt (me_irl)
         for (int j = 0; j < VIEW_HEIGHT; j++) {
-            if (j < (VIEW_HEIGHT - SPRITE_HEIGHT) && (i < 30 || i > 33)) //except the column in the centre
+            if (j < (VIEW_HEIGHT - SPRITE_HEIGHT) &&
+                (i < MINESHAFT_LEFT_WALL_COL || i > MINESHAFT_RIGHT_WALL_COL)) //except the column in the centre
                 m_dirt[i][j] = new Dirt(i, j, this);
             else
                 m_dirt[i][j] = nullptr;
-            if (j <= 4 && !m_dirt[i][j]) //except the bottom of the middle column.
+            if (j < MINESHAFT_BOTTOM_ROW && !m_dirt[i][j]) //except the bottom of the middle column.
                 m_dirt[i][j] = new Dirt(i, j, this);
         }
     }
@@ -168,4 +169,23 @@ int StudentWorld::getLevel() {
 
 void StudentWorld::incLevel() {
     ++m_level;
+}
+
+bool StudentWorld::dirtOrBoulderAt(int x, int y) {
+    for (int i = x + 3; i >= x; i--) {
+        for (int j = y + 3; j >= y; j--) {
+            if (!m_dirt[i][j])
+                continue;
+            if (m_dirt[i][j]->toBeRemoved())
+                continue;
+            if (i >= 0 && j >= 0) {
+                return true;
+            }
+        }
+    }
+    /*
+     * TODO: Check the Boulders/other objects. Write a function that determines if there's something that blocks the
+     * way of the protester trying to go there.
+     */
+    return false;
 }
