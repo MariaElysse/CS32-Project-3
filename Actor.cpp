@@ -13,8 +13,8 @@
 Actor::Actor(int imageID, int startX, int startY, GraphObject::Direction startDir, float size, unsigned int depth,
              StudentWorld *sw)
         : GraphObject(imageID, startX, startY, startDir, size, depth), m_world(sw), m_toBeRemoved(false),
-          m_ticksBetweenActions(3000),
-          m_ticksUntilAction(0) {
+          m_ticksBetweenActions(30),
+          m_ticksUntilAction(30) {
 
 }
 
@@ -23,8 +23,7 @@ bool Actor::obstructsProtesters(int x, int y) {
     //int tmpX = getX() - x;
     //int tmpY = getY() - y;
     //return tmpX < SPRITE_WIDTH && tmpX > 0 && tmpY < SPRITE_HEIGHT && tmpY > 0;
-
-    return (sqrtf(sqr(getX() - x) + sqr(getY() - y)) < SPRITE_WIDTH);
+    return false; //(sqrtf(sqr(getX() - x) + sqr(getY() - y)) < SPRITE_WIDTH);
     //if tmpX in [0..3] and tmpY in [0..3], the object is blocking the way of the protesters/FrackMan.
     // the "object", of course being just boulders.
 }
@@ -61,9 +60,11 @@ float Actor::minDistanceFrom(int x, int y) {
 
 
 bool Actor::actThisTick() {
-    bool act = !m_ticksUntilAction;
-    if (act)
+    bool act = m_ticksUntilAction == 0;
+    if (act) {
         m_ticksUntilAction = m_ticksBetweenActions;
+        return act;
+    }
     m_ticksUntilAction--;
     return act;
 }
@@ -111,13 +112,13 @@ bool Actor::validMovement(int &x, int &y, GraphObject::Direction direction) {
             }
             break;
         case GraphObject::down:
-            if (y > 0 && (!getWorld()->boulderAt(x, y - 1))) {
+            if ((y > 0) && !getWorld()->boulderAt(x, y - 1)) {
                 y = y - 1;
                 return true;
             }
             break;
         case GraphObject::left:
-            if (x > 0 && !getWorld()->boulderAt(x - 1, y)) {
+            if ((x > 0) && !getWorld()->boulderAt(x - 1, y)) {
                 x = x - 1;
                 return true;
             }
@@ -174,7 +175,7 @@ void FrackMan::doSomething() {
             break;
         case KEY_PRESS_SPACE: {
             validMovement(newX, newY, getDirection());
-            Squirt *squirt = new Squirt(getX(), getY(), getDirection(), getWorld());
+            Squirt *squirt = new Squirt(newX, newY, getDirection(), getWorld());
             getWorld()->insertActor(squirt);
             return;
         }
@@ -230,7 +231,7 @@ Dirt::Dirt(int locX, int locY, StudentWorld *sw)
 Dirt::~Dirt() {}
 
 bool Dirt::obstructsProtesters(int x, int y) {
-    return (x == getX() && y == getY());
+    return (x == getX() && y == getY()) && !toBeRemoved();
 } //dirt obstructs the protesters, but only in its small square.
 
 bool Discovery::obstructsProtesters(int x, int y) {
@@ -241,6 +242,7 @@ bool Discovery::obstructsProtesters(int x, int y) {
 
 Squirt::Squirt(int startX, int startY, GraphObject::Direction dir, StudentWorld *sw)
         : Actor(IID_WATER_SPURT, startX, startY, dir, SQUIRT_SIZE, SQUIRT_DEPTH, sw), m_distanceRemaining(4) {
+
     setVisible(true);
     this->getWorld()->playSound(SOUND_PLAYER_SQUIRT);
 }
@@ -250,21 +252,20 @@ void Squirt::doSomething() {
     //if (!actThisTick() && m_distanceRemaining!=0){
     //''      return;
     //  }
+
     if (m_distanceRemaining == 0) {
         this->markRemoved();
         return;
     }
-    if ((getWorld()->dirtAt(getX(), getY())) || getWorld()->boulderAt(getX(), getY())) {
+    int newX = getX();
+    int newY = getY();
+    if (!validMovement(newX, newY, getDirection())) {
         this->markRemoved();
         return;
     }
     --m_distanceRemaining;
-    for (int i = 0; i < SPRITE_WIDTH; i++) {
-        int x = getX();
-        int y = getY();
-        validMovement(x, y, getDirection());
-        this->moveTo(x, y);
-    }
+    this->moveTo(newX, newY);
+
 }
 
 Boulder::Boulder(int startX, int startY, StudentWorld *sw)
@@ -276,16 +277,18 @@ Boulder::Boulder(int startX, int startY, StudentWorld *sw)
 void Boulder::doSomething() {
     if (toBeRemoved())
         return;
-    if (dirtOrProtesterBelow() && !m_mobile)
-        return;
-    if (dirtOrProtesterBelow() && m_mobile) {
-        markRemoved();
+    if (dirtOrProtesterBelow()) {
+        if (m_mobile) {
+            this->markRemoved();
+            return;
+        }
+    } else if (m_mobile || actThisTick()) {
+        if (!m_mobile)
+            getWorld()->playSound(SOUND_FALLING_ROCK);
+        moveTo(getX(), getY() - 1);
+        m_mobile = true;
         return;
     }
-    if (!dirtOrProtesterBelow() && !m_mobile)
-        m_mobile = true;
-    else
-        moveTo(getX(), getY() - 1);
 }
 
 bool Boulder::dirtOrProtesterBelow() {
@@ -294,6 +297,9 @@ bool Boulder::dirtOrProtesterBelow() {
     //return false;
 }
 
+bool Boulder::obstructsProtesters(int x, int y) {
+    return (abs(getX() - x) < SPRITE_WIDTH && abs(getY() - y) < SPRITE_HEIGHT) && !toBeRemoved();
+}
 bool FrackMan::validMovement(int &x, int &y, GraphObject::Direction dir) {
     int nextX = x;
     int nextY = y;
@@ -303,4 +309,17 @@ bool FrackMan::validMovement(int &x, int &y, GraphObject::Direction dir) {
         return true;
     }
     return false;
+}
+
+bool Squirt::validMovement(int &x, int &y, GraphObject::Direction dir) {
+    int newX = x;
+    int newY = y;
+    if (Actor::validMovement(newX, newY, dir) && !getWorld()->dirtAt(x, y)) {
+        x = newX;
+        y = newY;
+        return true;
+    } else {
+        return false;
+    }
+
 }

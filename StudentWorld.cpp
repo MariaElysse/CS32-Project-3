@@ -8,7 +8,7 @@ GameWorld *createStudentWorld(string assetDir) {
 }
 
 // Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
-StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), m_dirtDeleted(false) {
+StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), m_dirtDeleted(false), m_level(0) {
     //add to vector m_objects
     //set up dirt
 }

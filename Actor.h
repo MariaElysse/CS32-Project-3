@@ -48,7 +48,7 @@ public:
     virtual bool obstructsProtesters(int x, int y);
     StudentWorld *getWorld(void);
 
-    bool validMovement(int &x, int &y, GraphObject::Direction dir);
+    virtual bool validMovement(int &x, int &y, GraphObject::Direction dir);
 
 
     bool actThisTick();
@@ -123,6 +123,7 @@ class Squirt : public Actor {
 public:
     Squirt(int startX, int startY, GraphObject::Direction dir, StudentWorld *sw);
 
+    bool validMovement(int &x, int &y, GraphObject::Direction dir);
     void doSomething();
 private:
     int m_distanceRemaining;
@@ -134,7 +135,10 @@ public:
 
     void doSomething();
 
+    bool obstructsProtesters(int x, int y);
     bool dirtOrProtesterBelow();
+
+    ~Boulder() { }
 
 private:
     bool m_mobile;
