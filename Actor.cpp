@@ -20,9 +20,11 @@ Actor::Actor(int imageID, int startX, int startY, GraphObject::Direction startDi
 
 bool Actor::obstructsProtesters(int x, int y) {
     //if it obstructs the movement of the Protestors
-    int tmpX = getX() - x;
-    int tmpY = getY() - y;
-    return tmpX < SPRITE_WIDTH && tmpX > 0 && tmpY < SPRITE_HEIGHT && tmpY > 0;
+    //int tmpX = getX() - x;
+    //int tmpY = getY() - y;
+    //return tmpX < SPRITE_WIDTH && tmpX > 0 && tmpY < SPRITE_HEIGHT && tmpY > 0;
+
+    return (sqrtf(sqr(getX() - x) + sqr(getY() - y)) < SPRITE_WIDTH);
     //if tmpX in [0..3] and tmpY in [0..3], the object is blocking the way of the protesters/FrackMan.
     // the "object", of course being just boulders.
 }
@@ -56,6 +58,7 @@ float Actor::minDistanceFrom(int x, int y) {
     }
     return minAny;
 }
+
 
 bool Actor::actThisTick() {
     bool act = !m_ticksUntilAction;
@@ -93,6 +96,42 @@ int Person::getHealth() {
 void Person::hurt(int damage) {
     m_hitPoints -= damage;
     //TODO: Should death be managed here? probably. Maybe not. Protesters and FrackMan deal with death differently.
+}
+
+bool Actor::validMovement(int &x, int &y, GraphObject::Direction direction) {
+    //determine if an Actor at a particular place can make a particular movement, even into dirt
+    //(i.e. only checks for Boulders and walls)
+    //the integers passed in by reference actually change, to represent the movement.
+    //this should be in Actor, and, actually, for Part 2, it will be.
+    switch (direction) {
+        case GraphObject::up:
+            if ((y < VIEW_HEIGHT - SPRITE_HEIGHT) && !getWorld()->boulderAt(x, y + 1)) {
+                y = y + 1;
+                return true;
+            }
+            break;
+        case GraphObject::down:
+            if (y > 0 && (!getWorld()->boulderAt(x, y - 1))) {
+                y = y - 1;
+                return true;
+            }
+            break;
+        case GraphObject::left:
+            if (x > 0 && !getWorld()->boulderAt(x - 1, y)) {
+                x = x - 1;
+                return true;
+            }
+            break;
+        case GraphObject::right:
+            if ((x < VIEW_WIDTH - SPRITE_WIDTH) && !getWorld()->boulderAt(x + 1, y)) {
+                x = x + 1;
+                return true;
+            }
+            break;
+        default:
+            return false;
+    }
+    return false;
 }
 
 /*//////////////////////////Discovery/////////////////////////
@@ -134,7 +173,7 @@ void FrackMan::doSomething() {
             dir = GraphObject::down;
             break;
         case KEY_PRESS_SPACE: {
-            getWorld()->validMovement(newX, newY, getDirection());
+            validMovement(newX, newY, getDirection());
             Squirt *squirt = new Squirt(getX(), getY(), getDirection(), getWorld());
             getWorld()->insertActor(squirt);
             return;
@@ -148,7 +187,7 @@ void FrackMan::doSomething() {
             break; //???how??? did you get here???
     }
     if (dir == getDirection())
-        getWorld()->validMovement(newX, newY, dir);
+        validMovement(newX, newY, dir);
     setDirection(dir);
     moveTo(newX, newY);
 }
@@ -215,7 +254,7 @@ void Squirt::doSomething() {
         this->markRemoved();
         return;
     }
-    if (getWorld()->dirtOrBoulderAt(getX(), getY())) {
+    if ((getWorld()->dirtAt(getX(), getY())) || getWorld()->boulderAt(getX(), getY())) {
         this->markRemoved();
         return;
     }
@@ -223,13 +262,45 @@ void Squirt::doSomething() {
     for (int i = 0; i < SPRITE_WIDTH; i++) {
         int x = getX();
         int y = getY();
-        getWorld()->validMovement(x, y, getDirection());
+        validMovement(x, y, getDirection());
         this->moveTo(x, y);
     }
 }
 
 Boulder::Boulder(int startX, int startY, StudentWorld *sw)
-        : Actor(IID_BOULDER, startX, startY, BOULDER_START_DIR, BOULDER_SIZE, BOULDER_DEPTH, sw) {
+        : Actor(IID_BOULDER, startX, startY, BOULDER_START_DIR, BOULDER_SIZE, BOULDER_DEPTH, sw), m_mobile(false) {
     this->setVisible(true);
 
+}
+
+void Boulder::doSomething() {
+    if (toBeRemoved())
+        return;
+    if (dirtOrProtesterBelow() && !m_mobile)
+        return;
+    if (dirtOrProtesterBelow() && m_mobile) {
+        markRemoved();
+        return;
+    }
+    if (!dirtOrProtesterBelow() && !m_mobile)
+        m_mobile = true;
+    else
+        moveTo(getX(), getY() - 1);
+}
+
+bool Boulder::dirtOrProtesterBelow() {
+    return getWorld()->dirtAt(getX(), getY() - 1);
+    //       return true; //if the boul}
+    //return false;
+}
+
+bool FrackMan::validMovement(int &x, int &y, GraphObject::Direction dir) {
+    int nextX = x;
+    int nextY = y;
+    if (Actor::validMovement(nextX, nextY, dir)) {
+        x = nextX;
+        y = nextY;
+        return true;
+    }
+    return false;
 }

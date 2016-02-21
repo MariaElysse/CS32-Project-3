@@ -48,6 +48,9 @@ public:
     virtual bool obstructsProtesters(int x, int y);
     StudentWorld *getWorld(void);
 
+    bool validMovement(int &x, int &y, GraphObject::Direction dir);
+
+
     bool actThisTick();
 private:
     int m_ticksUntilAction;
@@ -73,6 +76,7 @@ class FrackMan : public Person {
 public:
     FrackMan(StudentWorld *sw);
 
+    bool validMovement(int &x, int &y, GraphObject::Direction dir);
     void doSomething();
 private:
     int m_water;
@@ -125,7 +129,15 @@ private:
 };
 
 class Boulder : public Actor {
+public:
     Boulder(int startX, int startY, StudentWorld *sw);
+
+    void doSomething();
+
+    bool dirtOrProtesterBelow();
+
+private:
+    bool m_mobile;
 };
 #endif // ACTOR_H_
 

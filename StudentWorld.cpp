@@ -14,7 +14,6 @@ StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), m_dirtDe
 }
 
 int StudentWorld::init() {
-
     m_fm = new FrackMan(this);
     for (int i = 0; i < VIEW_WIDTH; i++) { //fill the entire world with dirt (me_irl)
         for (int j = 0; j < VIEW_HEIGHT; j++) {
@@ -27,6 +26,19 @@ int StudentWorld::init() {
                 m_dirt[i][j] = new Dirt(i, j, this);
         }
     }
+    int numBoulders = min(getLevel() / 2 + 2, 6);
+
+    for (int i = 0; i < numBoulders; i++) {
+        int boulderX = rand() % 60;
+        int boulderY = (rand() % 36) + 20;
+        while ((boulderX > MINESHAFT_LEFT_WALL_COL && boulderX < MINESHAFT_RIGHT_WALL_COL)) {
+            boulderX = rand() % 60;
+        }
+        Boulder *boulder = new Boulder(boulderX, boulderY, this);
+        deleteDirtAt(boulder->getX(), boulder->getY());
+        m_objects.push_back(boulder);
+    }
+
     return GWSTATUS_CONTINUE_GAME;
 }
 
@@ -96,42 +108,6 @@ void StudentWorld::clearDead() {
 }
 
 
-bool StudentWorld::validMovement(int &x, int &y, GraphObject::Direction direction) {
-    //determine if an Actor at a particular place can make a particular movement, even into dirt
-    //(i.e. only checks for Boulders and walls)
-    //the integers passed in by reference actually change, to represent the movement.
-    //this should be in Actor, and, actually, for Part 2, it will be.
-    switch (direction) {
-        case GraphObject::up:
-            if (y < VIEW_HEIGHT - SPRITE_HEIGHT) {
-                y = y + 1;
-                return true;
-            }
-            break;
-        case GraphObject::down:
-            if (y > 0) {
-                y = y - 1;
-                return true;
-            }
-            break;
-        case GraphObject::left:
-            if (x > 0) {
-                x = x - 1;
-                return true;
-            }
-            break;
-        case GraphObject::right:
-            if (x < VIEW_WIDTH - SPRITE_WIDTH) {
-                x = x + 1;
-                return true;
-            }
-            break;
-        default:
-            return false;
-    }
-    return false;
-}
-
 void StudentWorld::deleteDirtAt(int x, int y) { //this can be made 4x faster
 // by only erasing the dirt I'm walking into
     //erase all the dirt that the FrackMan is standing on
@@ -184,14 +160,26 @@ void StudentWorld::incLevel() {
     ++m_level;
 }
 
-bool StudentWorld::dirtOrBoulderAt(int x, int y) {
+bool StudentWorld::dirtAt(int x, int y) {
     for (int i = x + 3; i >= x; i--) {
         for (int j = y + 3; j >= y; j--) {
-            if (!m_dirt[i][j] || m_dirt[i][j]->toBeRemoved())
+            if (i < 0 && j < 0)
                 continue;
-            if (i >= 0 && j >= 0) {
+            if (!m_dirt[i][j] || m_dirt[i][j]->toBeRemoved()) {
+                continue;
+            } else {
                 return true;
             }
+
+        }
+    }
+    return false;
+}
+
+bool StudentWorld::boulderAt(int x, int y) {
+    for (std::list<Actor *>::iterator i = m_objects.begin(); i != m_objects.end(); ++i) {
+        if ((*i)->obstructsProtesters(x, y)) {
+            return true;
         }
     }
     /*
@@ -200,3 +188,7 @@ bool StudentWorld::dirtOrBoulderAt(int x, int y) {
      */
     return false;
 }
+
+//bool StudentWorld::dirtAt(int x, int y){
+//  return m_dirt[x][y]!= nullptr;
+//}

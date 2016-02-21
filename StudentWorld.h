@@ -31,8 +31,6 @@ public:
 
     void deleteDirtAt(int x, int y);
 
-    bool validMovement(int &x, int &y, GraphObject::Direction);
-
     void clearDead();
 
     void insertActor(Actor *toBeAdded);
@@ -47,7 +45,9 @@ public:
 
     void incLevel();
 
-    bool dirtOrBoulderAt(int x, int y);
+    bool boulderAt(int x, int y);
+
+    bool dirtAt(int x, int y);
 
 private:
     std::string setDisplayText(void);
