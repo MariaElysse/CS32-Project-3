@@ -29,12 +29,17 @@ const int BACKGROUND = 3;
 
 const float SQUIRT_SIZE = 1.0;
 const int SQUIRT_DEPTH = 1;
+
+const GraphObject::Direction BOULDER_START_DIR = GraphObject::down;
+const float BOULDER_SIZE = 1.0;
+const int BOULDER_DEPTH = 1;
 // Students:  Add code to this file, Actor.cpp, StudentWorld.h, and StudentWorld.cpp
 
 class Actor : public GraphObject {
 public:
     Actor(int imageID, int startX, int startY, Direction startDir, float size, unsigned int depth, StudentWorld *sw);
 
+    virtual float minDistanceFrom(int x, int y);
     virtual void markRemoved();
     virtual bool toBeRemoved();
     virtual ~Actor();
@@ -42,7 +47,11 @@ public:
 
     virtual bool obstructsProtesters(int x, int y);
     StudentWorld *getWorld(void);
+
+    bool actThisTick();
 private:
+    int m_ticksUntilAction;
+    int m_ticksBetweenActions;
     StudentWorld *m_world;
     bool m_toBeRemoved;
 };
@@ -110,8 +119,13 @@ class Squirt : public Actor {
 public:
     Squirt(int startX, int startY, GraphObject::Direction dir, StudentWorld *sw);
 
+    void doSomething();
 private:
     int m_distanceRemaining;
+};
+
+class Boulder : public Actor {
+    Boulder(int startX, int startY, StudentWorld *sw);
 };
 #endif // ACTOR_H_
 

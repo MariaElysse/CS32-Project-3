@@ -1,14 +1,8 @@
 #include "freeglut.h"
 #include "GameController.h"
 #include "GameWorld.h"
-#include "GameConstants.h"
 #include "GraphObject.h"
 #include "SoundFX.h"
-#include "SpriteManager.h"
-#include <string>
-#include <map>
-#include <utility>
-#include <cstdlib>
 #include <algorithm>
 
 using namespace std;
@@ -104,7 +98,8 @@ void GameController::initDrawersAndSounds() {
             make_pair(SOUND_FOUND_OIL, "foundoil.wav"),            // to add
             make_pair(SOUND_SONAR, "sonar.wav"),
             make_pair(SOUND_DIG, "digging.wav"),
-            make_pair(SOUND_FALLING_ROCK, "rockslide.wav")
+            make_pair(SOUND_FALLING_ROCK, "rockslide.wav"),
+            make_pair(SOUND_PLAYER_SQUIRT, "squirt.wav"),
     };
 
     for (int k = 0; k < sizeof(drawers) / sizeof(drawers[0]); k++) {

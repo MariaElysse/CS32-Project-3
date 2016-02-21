@@ -8,7 +8,7 @@ GameWorld *createStudentWorld(string assetDir) {
 }
 
 // Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
-StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), thing_deleted(false) {
+StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), m_dirtDeleted(false) {
     //add to vector m_objects
     //set up dirt
 }
@@ -50,12 +50,20 @@ void StudentWorld::cleanUp() { //erase all the dirt. Erase all the items. Erase 
     m_fm = nullptr;
 }
 
+void StudentWorld::insertActor(Actor *toBeAdded) {
+    if (toBeAdded)
+        this->m_objects.push_back(toBeAdded);
+}
 int StudentWorld::move() {
 
     // This code is here merely to allow the game to build, run, and terminate after you hit enter a few times.
     // Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
     // decLives();
     m_fm->doSomething();
+    for (std::list<Actor *>::iterator i = m_objects.begin(); i != m_objects.end(); ++i) {
+        (*i)->doSomething();
+    }
+    //clearDead(); //this is in frackman::dosomething
     //int val;
     /*if (getLives()<=0)
         return GWSTATUS_PLAYER_DIED;
@@ -64,17 +72,21 @@ int StudentWorld::move() {
 }
 
 void StudentWorld::clearDead() {
-    if (!thing_deleted) //allows for lazy evaluation, and the game to not be slow as molasses
-        return; //very important to set this every time you call Actor::markRemoved()
-    thing_deleted = false;
     //delete all the objects marked as dead.
-    for (std::list<Actor *>::iterator i = m_objects.begin(); !m_objects.empty(); i++) {
-        Actor *tmp = *i;
-        if (tmp->toBeRemoved()) {
-            m_objects.erase(i);
+    std::list<Actor *>::iterator i = m_objects.begin();
+    while (i != m_objects.end()) {
+        //Actor *tmp = *i;
+        if ((*i)->toBeRemoved()) {
+            Actor *tmp = *i;
+            i = m_objects.erase(i);
             delete tmp;
+        } else {
+            ++i;
         }
     }
+    if (!m_dirtDeleted) //allows for lazy evaluation, and the game to not be slow as molasses
+        return; //very important to set this every time you call Actor::markRemoved()
+    m_dirtDeleted = false;
     while (!dirtToBeDeleted.empty()) { //removed a nested for loop: winning.
         StudentWorld::IntPair toDelete = dirtToBeDeleted.top();
         dirtToBeDeleted.pop(); //everything inside of the stack is to be deleted
@@ -85,7 +97,8 @@ void StudentWorld::clearDead() {
 
 
 bool StudentWorld::validMovement(int &x, int &y, GraphObject::Direction direction) {
-    //determine if a Person at a particular place can make a particular movement.
+    //determine if an Actor at a particular place can make a particular movement, even into dirt
+    //(i.e. only checks for Boulders and walls)
     //the integers passed in by reference actually change, to represent the movement.
     //this should be in Actor, and, actually, for Part 2, it will be.
     switch (direction) {
@@ -139,7 +152,7 @@ void StudentWorld::deleteDirtAt(int x, int y) { //this can be made 4x faster
             }
         }
     }
-    thing_deleted = true;
+    m_dirtDeleted = true;
     if (dirt_deleted) {
         playSound(SOUND_DIG);
     }
@@ -174,9 +187,7 @@ void StudentWorld::incLevel() {
 bool StudentWorld::dirtOrBoulderAt(int x, int y) {
     for (int i = x + 3; i >= x; i--) {
         for (int j = y + 3; j >= y; j--) {
-            if (!m_dirt[i][j])
-                continue;
-            if (m_dirt[i][j]->toBeRemoved())
+            if (!m_dirt[i][j] || m_dirt[i][j]->toBeRemoved())
                 continue;
             if (i >= 0 && j >= 0) {
                 return true;
