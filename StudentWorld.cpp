@@ -10,7 +10,7 @@ GameWorld *createStudentWorld(string assetDir) {
 
 // Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
 StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), m_dirtDeleted(false), m_level(0),
-                                                   m_sonarPresent(false) {
+                                                   m_sonarPresent(false), initialized(false) {
     //add to vector m_objects
     //set up dirt
 }
@@ -43,11 +43,13 @@ int StudentWorld::init() {
         m_objects.push_back(oilBarrel);
         //oilBarrel->setVisible(true);
     }
+    initialized = true;
     return GWSTATUS_CONTINUE_GAME;
 }
 
 StudentWorld::~StudentWorld() { //erase all the dirt. et cetera.
-    cleanUp();
+    if (initialized)
+        cleanUp();
 }
 
 void StudentWorld::cleanUp() { //erase all the dirt. Erase all the items. Erase the FrackMan
@@ -203,7 +205,7 @@ void StudentWorld::gotOil() {
 StudentWorld::IntPair StudentWorld::getRandomActorLocation() {
     int boulderX = rand() % 60;
     int boulderY = (rand() % 36) + 20;
-    while ((boulderX > MINESHAFT_LEFT_WALL_COL + SPRITE_WIDTH && boulderX < MINESHAFT_RIGHT_WALL_COL + SPRITE_WIDTH)) {
+    while ((boulderX + SPRITE_WIDTH > MINESHAFT_LEFT_WALL_COL && boulderX - SPRITE_WIDTH < MINESHAFT_RIGHT_WALL_COL)) {
         boulderX = rand() % 60;
     }
     return IntPair(boulderX, boulderY);

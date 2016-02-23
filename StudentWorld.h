@@ -84,6 +84,7 @@ private:
     int m_oil;
     bool m_sonarPresent;
     std::stack<IntPair> dirtToBeDeleted; //[i][j] values for the dirt that is to be deleted the next time we get a chance.
+    bool initialized;
 };
 
 #endif // STUDENTWORLD_H_
