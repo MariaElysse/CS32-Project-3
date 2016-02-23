@@ -33,6 +33,11 @@ const int SQUIRT_DEPTH = 1;
 const GraphObject::Direction BOULDER_START_DIR = GraphObject::down;
 const float BOULDER_SIZE = 1.0;
 const int BOULDER_DEPTH = 1;
+
+const int SONAR_START_X = 0;
+const int SONAR_START_Y = 60;
+const unsigned int SONAR_VALUE = 75;
+
 // Students:  Add code to this file, Actor.cpp, StudentWorld.h, and StudentWorld.cpp
 
 class Actor : public GraphObject {
@@ -50,8 +55,9 @@ public:
 
     virtual bool validMovement(int &x, int &y, GraphObject::Direction dir);
 
-
     bool actThisTick();
+
+    void setTicks(int ticks);
 private:
     int m_ticksUntilAction;
     int m_ticksBetweenActions;
@@ -75,9 +81,12 @@ private:
 class FrackMan : public Person {
 public:
     FrackMan(StudentWorld *sw);
-
     bool validMovement(int &x, int &y, GraphObject::Direction dir);
     void doSomething();
+
+    void addSonar();
+
+    int getSonar();
 private:
     int m_water;
     int m_sonar;
@@ -94,9 +103,8 @@ class Discovery : public Actor { //oil, gold, SONAR kit, Water.
 public:
     Discovery(int imageId, int locX, int locY, StudentWorld *sw);
 
+    bool pickedUp();
     virtual void doSomething() = 0;
-
-    virtual bool isAlive() = 0;
 
     virtual ~Discovery() { };
 
@@ -106,7 +114,6 @@ public:
 class OilBarrel : public Discovery {
 public:
     OilBarrel(int locX, int locY, StudentWorld *sw);
-
     void doSomething();
 };
 
@@ -142,6 +149,13 @@ public:
 
 private:
     bool m_mobile;
+};
+
+class Sonar : public Discovery {
+public:
+    Sonar(StudentWorld *sw);
+
+    void doSomething();
 };
 #endif // ACTOR_H_
 

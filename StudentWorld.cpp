@@ -1,6 +1,7 @@
 #include "StudentWorld.h"
 #include "Actor.h"
 
+
 using namespace std;
 
 GameWorld *createStudentWorld(string assetDir) {
@@ -8,17 +9,21 @@ GameWorld *createStudentWorld(string assetDir) {
 }
 
 // Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
-StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), m_dirtDeleted(false), m_level(0) {
+StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), m_dirtDeleted(false), m_level(0),
+                                                   m_sonarPresent(false) {
     //add to vector m_objects
     //set up dirt
 }
 
 int StudentWorld::init() {
+    delete m_fm;
     m_fm = new FrackMan(this);
+    int numBoulders = min(getLevel() / 2 + 2, 6);
+    m_barrelsRemaining = min(getLevel() / 2 + 2, 6);
     for (int i = 0; i < VIEW_WIDTH; i++) { //fill the entire world with dirt (me_irl)
         for (int j = 0; j < VIEW_HEIGHT; j++) {
-            if (j < (VIEW_HEIGHT - SPRITE_HEIGHT) &&
-                (i < MINESHAFT_LEFT_WALL_COL || i > MINESHAFT_RIGHT_WALL_COL)) //except the column in the centre
+            if ((j < (VIEW_HEIGHT - SPRITE_HEIGHT) &&
+                 (i < MINESHAFT_LEFT_WALL_COL || i > MINESHAFT_RIGHT_WALL_COL))) //except the column in the centre
                 m_dirt[i][j] = new Dirt(i, j, this);
             else
                 m_dirt[i][j] = nullptr;
@@ -26,19 +31,18 @@ int StudentWorld::init() {
                 m_dirt[i][j] = new Dirt(i, j, this);
         }
     }
-    int numBoulders = min(getLevel() / 2 + 2, 6);
-
     for (int i = 0; i < numBoulders; i++) {
-        int boulderX = rand() % 60;
-        int boulderY = (rand() % 36) + 20;
-        while ((boulderX > MINESHAFT_LEFT_WALL_COL && boulderX < MINESHAFT_RIGHT_WALL_COL)) {
-            boulderX = rand() % 60;
-        }
-        Boulder *boulder = new Boulder(boulderX, boulderY, this);
-        deleteDirtAt(boulder->getX(), boulder->getY());
+        IntPair boulderLoc = this->getRandomActorLocation();
+        Boulder *boulder = new Boulder(boulderLoc.i, boulderLoc.j, this);
         m_objects.push_back(boulder);
     }
 
+    for (int i = 0; i < m_barrelsRemaining; i++) {
+        IntPair oilLoc = this->getRandomActorLocation();
+        OilBarrel *oilBarrel = new OilBarrel(oilLoc.i, oilLoc.j, this);
+        m_objects.push_back(oilBarrel);
+        //oilBarrel->setVisible(true);
+    }
     return GWSTATUS_CONTINUE_GAME;
 }
 
@@ -47,6 +51,8 @@ StudentWorld::~StudentWorld() { //erase all the dirt. et cetera.
 }
 
 void StudentWorld::cleanUp() { //erase all the dirt. Erase all the items. Erase the FrackMan
+    delete m_fm;
+    m_fm = nullptr;
     while (!m_objects.empty()) {
         Actor *tmp = *(m_objects.begin());
         m_objects.erase(m_objects.begin());
@@ -58,8 +64,7 @@ void StudentWorld::cleanUp() { //erase all the dirt. Erase all the items. Erase 
             m_dirt[i][j] = nullptr;
         }
     }
-    delete m_fm;
-    m_fm = nullptr;
+    clearDead();
 }
 
 void StudentWorld::insertActor(Actor *toBeAdded) {
@@ -67,6 +72,10 @@ void StudentWorld::insertActor(Actor *toBeAdded) {
         this->m_objects.push_back(toBeAdded);
 }
 int StudentWorld::move() {
+    if (m_barrelsRemaining == 0)
+        return GWSTATUS_FINISHED_LEVEL;
+    if (m_fm->getHealth() <= 0)
+        return GWSTATUS_PLAYER_DIED;
 
     // This code is here merely to allow the game to build, run, and terminate after you hit enter a few times.
     // Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
@@ -75,6 +84,16 @@ int StudentWorld::move() {
     for (std::list<Actor *>::iterator i = m_objects.begin(); i != m_objects.end(); ++i) {
         (*i)->doSomething();
     }
+    int goodie_probability = rand() % 100;
+    if ((goodie_probability) % (min(90, getLevel() * 10 + 30)) == 0) {
+        if ((rand() % 5) == 0 && !m_sonarPresent) {
+            Sonar *sonar = new Sonar(this);
+            m_objects.push_back(sonar);
+            m_sonarPresent = true;
+        } else { ;//make water.
+        }
+    }
+    setGameStatText("KT SCORE: " + std::to_string(this->getScore()));
     //clearDead(); //this is in frackman::dosomething
     //int val;
     /*if (getLives()<=0)
@@ -108,7 +127,7 @@ void StudentWorld::clearDead() {
 }
 
 
-void StudentWorld::deleteDirtAt(int x, int y) { //this can be made 4x faster
+void StudentWorld::deleteDirtAt(int x, int y, bool play) { //this can be made 4x faster
 // by only erasing the dirt I'm walking into
     //erase all the dirt that the FrackMan is standing on
     //or,more generally, erase all the dirt in a 4x4 square
@@ -129,7 +148,7 @@ void StudentWorld::deleteDirtAt(int x, int y) { //this can be made 4x faster
         }
     }
     m_dirtDeleted = true;
-    if (dirt_deleted) {
+    if (dirt_deleted && play) {
         playSound(SOUND_DIG);
     }
 }
@@ -138,26 +157,6 @@ std::string StudentWorld::setDisplayText(void) {
     return std::string("");
     //return std::string()
     //return __cxx11::basic_string<char, char_traits<_CharT>, allocator<_CharT>>();
-}
-
-int StudentWorld::getScore() {
-    return m_score;
-}
-
-void StudentWorld::incScore(int amount) {
-    m_score = m_score + amount;
-}
-
-void StudentWorld::resetScore() {
-    m_score = 0;
-}
-
-int StudentWorld::getLevel() {
-    return m_level;
-}
-
-void StudentWorld::incLevel() {
-    ++m_level;
 }
 
 bool StudentWorld::dirtAt(int x, int y) {
@@ -176,19 +175,57 @@ bool StudentWorld::dirtAt(int x, int y) {
     return false;
 }
 
-bool StudentWorld::boulderAt(int x, int y) {
+bool StudentWorld::obstructionAt(int x, int y) {
     for (std::list<Actor *>::iterator i = m_objects.begin(); i != m_objects.end(); ++i) {
         if ((*i)->obstructsProtesters(x, y)) {
             return true;
         }
     }
-    /*
-     * TODO: Check the Boulders/other objects. Write a function that determines if there's something that blocks the
-     * way of the protester trying to go there.
-     */
+
     return false;
 }
 
 //bool StudentWorld::dirtAt(int x, int y){
 //  return m_dirt[x][y]!= nullptr;
 //}
+float StudentWorld::frackManCornerRadius(Actor *actor) {
+    return sqrtf(sqr(fabsf(actor->getX() - m_fm->getX())) + sqr(fabsf(actor->getY() - m_fm->getY())));
+}
+
+void StudentWorld::gotOil() {
+    playSound(SOUND_GOT_GOODIE);
+    m_oil++;
+    m_barrelsRemaining--;
+    increaseScore(BARREL_VALUE);
+}
+
+
+StudentWorld::IntPair StudentWorld::getRandomActorLocation() {
+    int boulderX = rand() % 60;
+    int boulderY = (rand() % 36) + 20;
+    while ((boulderX > MINESHAFT_LEFT_WALL_COL + SPRITE_WIDTH && boulderX < MINESHAFT_RIGHT_WALL_COL + SPRITE_WIDTH)) {
+        boulderX = rand() % 60;
+    }
+    return IntPair(boulderX, boulderY);
+}
+
+int StudentWorld::amtOfOil() {
+    return m_oil;
+}
+
+
+void StudentWorld::sonarDespawned(bool byFrackMan) {
+    if (byFrackMan) {
+        increaseScore(SONAR_VALUE);
+        m_fm->addSonar();
+    }
+    m_sonarPresent = false;
+}
+
+void StudentWorld::sonarPulse(int x, int y) {
+    for (std::list<Actor *>::iterator i = m_objects.begin(); i != m_objects.end(); ++i) {
+        if (frackManCornerRadius(*i) - 12 <= 0.5) {
+            (*i)->setVisible(true);
+        }
+    }
+}

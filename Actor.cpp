@@ -1,9 +1,7 @@
 #include "Actor.h"
 
-#define sqr(x) ((x)*(x))
-#define min(x, y) ((x) <= (y)) ? (x) : (y)
 
-//macros yay
+
 
 // Students:  Add code to this file (if you wish), Actor.h, StudentWorld.h, and StudentWorld.cpp
 /*//////////////////////Actor////////////////////////////////
@@ -40,7 +38,7 @@ bool Actor::toBeRemoved() {
 }
 
 float Actor::minDistanceFrom(int x, int y) {
-    //return min distance from all cornerso
+    //return min distance from all corners
     //NEVER CALL THIS ON A SMALL OBJECT LIKE DIRT.
     float minAny = 256; //very large, impossible number, seeing as the largest it could possibly be is about 10.
     for (int i = 0; i <= SPRITE_WIDTH; i++) {
@@ -60,12 +58,12 @@ float Actor::minDistanceFrom(int x, int y) {
 
 
 bool Actor::actThisTick() {
-    bool act = m_ticksUntilAction == 0;
+    bool act = (m_ticksUntilAction == 0);
     if (act) {
         m_ticksUntilAction = m_ticksBetweenActions;
-        return act;
+    } else {
+        m_ticksUntilAction--;
     }
-    m_ticksUntilAction--;
     return act;
 }
 
@@ -96,7 +94,6 @@ int Person::getHealth() {
 
 void Person::hurt(int damage) {
     m_hitPoints -= damage;
-    //TODO: Should death be managed here? probably. Maybe not. Protesters and FrackMan deal with death differently.
 }
 
 bool Actor::validMovement(int &x, int &y, GraphObject::Direction direction) {
@@ -106,25 +103,25 @@ bool Actor::validMovement(int &x, int &y, GraphObject::Direction direction) {
     //this should be in Actor, and, actually, for Part 2, it will be.
     switch (direction) {
         case GraphObject::up:
-            if ((y < VIEW_HEIGHT - SPRITE_HEIGHT) && !getWorld()->boulderAt(x, y + 1)) {
+            if ((y < VIEW_HEIGHT - SPRITE_HEIGHT) && !getWorld()->obstructionAt(x, y + 1)) {
                 y = y + 1;
                 return true;
             }
             break;
         case GraphObject::down:
-            if ((y > 0) && !getWorld()->boulderAt(x, y - 1)) {
+            if ((y > 0) && !getWorld()->obstructionAt(x, y - 1)) {
                 y = y - 1;
                 return true;
             }
             break;
         case GraphObject::left:
-            if ((x > 0) && !getWorld()->boulderAt(x - 1, y)) {
+            if ((x > 0) && !getWorld()->obstructionAt(x - 1, y)) {
                 x = x - 1;
                 return true;
             }
             break;
         case GraphObject::right:
-            if ((x < VIEW_WIDTH - SPRITE_WIDTH) && !getWorld()->boulderAt(x + 1, y)) {
+            if ((x < VIEW_WIDTH - SPRITE_WIDTH) && !getWorld()->obstructionAt(x + 1, y)) {
                 x = x + 1;
                 return true;
             }
@@ -183,6 +180,11 @@ void FrackMan::doSomething() {
             this->hurt(this->getHealth());
             //completely annoy the frackman
             break;
+        case 'z':
+            if (m_sonar > 0) {
+                getWorld()->sonarPulse(getX(), getY());
+                m_sonar--;
+            }
         default:
             dir = GraphObject::none;
             break; //???how??? did you get here???
@@ -201,9 +203,10 @@ OilBarrel::OilBarrel(int locX, int locY, StudentWorld *sw)
 }
 
 void OilBarrel::doSomething() {
-    if (!this->isAlive())
+    if (this->toBeRemoved())
         return; //well if it's dead I don't really expect a lot out of it.
-
+    if (this->pickedUp())
+        getWorld()->gotOil();
 }
 
 
@@ -225,7 +228,6 @@ Dirt::Dirt(int locX, int locY, StudentWorld *sw)
     setVisible(true);
 }
 
-//The World Is Not Enough
 
 
 Dirt::~Dirt() {}
@@ -241,7 +243,7 @@ bool Discovery::obstructsProtesters(int x, int y) {
 
 
 Squirt::Squirt(int startX, int startY, GraphObject::Direction dir, StudentWorld *sw)
-        : Actor(IID_WATER_SPURT, startX, startY, dir, SQUIRT_SIZE, SQUIRT_DEPTH, sw), m_distanceRemaining(4) {
+        : Actor(IID_WATER_SPURT, startX, startY, dir, SQUIRT_SIZE, SQUIRT_DEPTH, sw), m_distanceRemaining(8) {
 
     setVisible(true);
     this->getWorld()->playSound(SOUND_PLAYER_SQUIRT);
@@ -271,6 +273,7 @@ void Squirt::doSomething() {
 Boulder::Boulder(int startX, int startY, StudentWorld *sw)
         : Actor(IID_BOULDER, startX, startY, BOULDER_START_DIR, BOULDER_SIZE, BOULDER_DEPTH, sw), m_mobile(false) {
     this->setVisible(true);
+    getWorld()->deleteDirtAt(getX(), getY(), false);
 
 }
 
@@ -298,7 +301,8 @@ bool Boulder::dirtOrProtesterBelow() {
 }
 
 bool Boulder::obstructsProtesters(int x, int y) {
-    return (abs(getX() - x) < SPRITE_WIDTH && abs(getY() - y) < SPRITE_HEIGHT) && !toBeRemoved();
+    return (fabsf(getX() - x) < SPRITE_WIDTH && fabsf(getY() - y) < SPRITE_HEIGHT) &&
+           !toBeRemoved(); //-1 to account for edge of boulder being smaller?
 }
 bool FrackMan::validMovement(int &x, int &y, GraphObject::Direction dir) {
     int nextX = x;
@@ -322,4 +326,45 @@ bool Squirt::validMovement(int &x, int &y, GraphObject::Direction dir) {
         return false;
     }
 
+}
+
+Sonar::Sonar(StudentWorld *sw) : Discovery(IID_SONAR, SONAR_START_X, SONAR_START_Y, sw) {
+    setVisible(true);
+    setTicks(min(100, 300 - 100 * (getWorld()->getLevel())));
+}
+
+void Sonar::doSomething() {
+    if (actThisTick()) {
+        this->markRemoved();
+        getWorld()->sonarDespawned(false);
+    }
+    if (this->pickedUp()) {
+        getWorld()->sonarDespawned(true);
+    }
+}
+
+void Actor::setTicks(int ticks) {
+    m_ticksUntilAction = ticks;
+}
+
+bool Discovery::pickedUp() {
+    if (getWorld()->frackManCornerRadius(this) <= 3.0 && !toBeRemoved()) {
+        this->markRemoved();
+        getWorld()->playSound(SOUND_GOT_GOODIE);
+        return true;
+    }
+    if (getWorld()->frackManCornerRadius(this) <= 4.0 && !toBeRemoved()) {
+        setVisible(true);
+        return false;
+    }
+    return false;
+
+}
+
+void FrackMan::addSonar() {
+    m_sonar++;
+}
+
+int FrackMan::getSonar() {
+    return m_sonar;
 }
