@@ -21,6 +21,7 @@ const GraphObject::Direction DISCOVERY_START_DIR = GraphObject::right;
 
 const GraphObject::Direction PROTESTER_START_DIR = GraphObject::left;
 const int PROTESTER_START_HITPOINTS = 5;
+const int PROTESTER_DAMAGE = 2;
 const int HARDCORE_PROTESTER_HITPOINTS = 20;
 
 const GraphObject::Direction DIRT_DIR = GraphObject::right;
@@ -36,7 +37,9 @@ const int BOULDER_DEPTH = 1;
 
 const int SONAR_START_X = 0;
 const int SONAR_START_Y = 60;
-const unsigned int SONAR_VALUE = 75;
+
+const int SQUIRT_DAMAGE = 2;
+const int BOULDER_DAMAGE = 100;
 
 // Students:  Add code to this file, Actor.cpp, StudentWorld.h, and StudentWorld.cpp
 
@@ -44,12 +47,14 @@ class Actor : public GraphObject {
 public:
     Actor(int imageID, int startX, int startY, Direction startDir, float size, unsigned int depth, StudentWorld *sw);
 
+    GraphObject::Direction directionTo(int x, int y);
     virtual float minDistanceFrom(int x, int y);
     virtual void markRemoved();
     virtual bool toBeRemoved();
     virtual ~Actor();
     virtual void doSomething() = 0;
 
+    virtual int getHealth();
     virtual bool obstructsProtesters(int x, int y);
     StudentWorld *getWorld(void);
 
@@ -58,6 +63,9 @@ public:
     bool actThisTick();
 
     void setTicks(int ticks);
+
+    virtual void hurt(int damage);
+
 private:
     int m_ticksUntilAction;
     int m_ticksBetweenActions;
@@ -72,8 +80,10 @@ public:
     virtual bool obstructsProtesters(int x, int y);
 
     virtual int getHealth();
-
     virtual void hurt(int damage);
+
+    GraphObject::Direction getValidRandomDirection();
+
 private:
     int m_hitPoints;
 };
@@ -86,7 +96,12 @@ public:
 
     void addSonar();
 
+    void addGold();
+
+    void addWater();
     int getSonar();
+
+    void hurt(int damage);
 private:
     int m_water;
     int m_sonar;
@@ -97,6 +112,31 @@ private:
 class Protester : public Person {
 public:
     Protester(int imageId, int startX, int startY, StudentWorld *sw);
+
+    void doSomething();
+
+    void hurt(int damage);
+
+    bool validMovement(int &x, int &y, GraphObject::Direction dir);
+
+    void stun();
+
+private:
+    bool yellThisTick();
+
+    bool m_hardcore;
+    int m_nSquaresToMove;
+    int m_ticksBetweenYells;
+    int m_lastPerpendicularTurn;
+    bool m_first_run;
+    int m_stunDuration;
+};
+
+class HardcoreProtester : public Protester {
+public:
+    HardcoreProtester(int imageId, int startX, int startY, StudentWorld *sw);
+
+    void doSomething();
 };
 
 class Discovery : public Actor { //oil, gold, SONAR kit, Water.
@@ -143,7 +183,8 @@ public:
     void doSomething();
 
     bool obstructsProtesters(int x, int y);
-    bool dirtOrProtesterBelow();
+
+    bool dirtOrRockBelow();
 
     ~Boulder() { }
 
@@ -151,9 +192,25 @@ private:
     bool m_mobile;
 };
 
+class GoldNugget : public Discovery {
+public:
+    GoldNugget(int locX, int locY, StudentWorld *sw);
+
+    void doSomething();
+
+private:
+    bool m_isBribe;
+};
 class Sonar : public Discovery {
 public:
     Sonar(StudentWorld *sw);
+
+    void doSomething();
+};
+
+class Water : public Discovery {
+public:
+    Water(int locX, int locY, StudentWorld *sw);
 
     void doSomething();
 };
