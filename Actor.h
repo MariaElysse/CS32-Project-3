@@ -65,6 +65,8 @@ public:
     void setTicks(int ticks);
 
     virtual void hurt(int damage);
+protected:
+    void setTicksUntil(int ticks);
 
 private:
     int m_ticksUntilAction;
@@ -82,7 +84,6 @@ public:
     virtual int getHealth();
     virtual void hurt(int damage);
 
-    GraphObject::Direction getValidRandomDirection();
 
 private:
     int m_hitPoints;
@@ -112,17 +113,23 @@ private:
 class Protester : public Person {
 public:
     Protester(int imageId, int startX, int startY, StudentWorld *sw);
+    GraphObject::Direction getValidRandomDirection();
 
-    void doSomething();
+    virtual void doSomething();
 
     void hurt(int damage);
 
-    bool validMovement(int &x, int &y, GraphObject::Direction dir);
-
+    void moveToSpawn();
+    void moveToFrackManInLineOfSight();
     void stun();
+    void getNewPerpendicularTurn();
+    bool stunned();
+    bool changeDirection();
+    void makePerpendicularTurnIfNeeded();
+protected:
+    bool yellThisTick();
 
 private:
-    bool yellThisTick();
 
     bool m_hardcore;
     int m_nSquaresToMove;
@@ -134,7 +141,7 @@ private:
 
 class HardcoreProtester : public Protester {
 public:
-    HardcoreProtester(int imageId, int startX, int startY, StudentWorld *sw);
+    HardcoreProtester(int startX, int startY, StudentWorld *sw);
 
     void doSomething();
 };
@@ -170,7 +177,7 @@ class Squirt : public Actor {
 public:
     Squirt(int startX, int startY, GraphObject::Direction dir, StudentWorld *sw);
 
-    bool validMovement(int &x, int &y, GraphObject::Direction dir);
+    //bool validMovement(int &x, int &y, GraphObject::Direction dir);
     void doSomething();
 private:
     int m_distanceRemaining;

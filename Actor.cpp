@@ -57,7 +57,7 @@ float Actor::minDistanceFrom(int x, int y) {
 
 
 bool Actor::actThisTick() {
-    bool act = (m_ticksUntilAction == 0);
+    bool act = (m_ticksUntilAction <= 0);
     if (act) {
         m_ticksUntilAction = m_ticksBetweenActions;
     } else {
@@ -230,132 +230,64 @@ void OilBarrel::doSomething() {
 //but I also really want that interview with Symantec
 Protester::Protester(int imageId, int startX, int startY, StudentWorld *sw)
         : Person(imageId, startX, startY, PROTESTER_START_DIR, PROTESTER_START_HITPOINTS, sw), m_ticksBetweenYells(0),
-          m_lastPerpendicularTurn(0), m_first_run(true) {
+          m_lastPerpendicularTurn(0), m_first_run(true), m_stunDuration(0) {
     setVisible(true);
     int ticksBetweenMoves = max(0, 3 - getWorld()->getLevel() / 4);
+    setTicksUntil(0);
     this->setTicks(ticksBetweenMoves);
 }
 
 void Protester::doSomething() {
-    if (toBeRemoved())
-        return;
-    if (getHealth() <= 0) {
-        int x = getX();
-        int y = getY();
-        if (x != 60 || y != 60) {
-            GraphObject:
-            Direction dir = getWorld()->leaveOilField(x, y);
-            setDirection(dir);
-            moveTo(x, y);
-            getWorld()->setGameStatText("XY: " + std::to_string(x) + std::to_string(y));
-        } else {
-            markRemoved();
-        }
+    if (toBeRemoved()) {
         return;
     }
-    if (m_stunDuration > 0) {
-        m_stunDuration--;
+    if (getHealth() <= 0) {
+        getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
+        moveToSpawn();
+        return;
+    }
+    if (stunned()) {
+        //getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
+
         return;
     }
     //GraphObject::Direction fm_dir = getWorld()->frackManDirection();]
-    if (!actThisTick() && !m_first_run) {
+    if (!actThisTick()) {
+        //getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
         return;
     }
-
-    if (m_first_run)
-        m_first_run = false;
-
-
     float fm_dist = getWorld()->frackManCornerRadius(this);
-    m_lastPerpendicularTurn--; //note: this may be the source of bugs //todo::
-    if (getWorld()->lineOfSightWithFrackMan(this) && fm_dist >= 4.0) {
-        int x = getX();
-        int y = getY();
-        setDirection(getWorld()->directionToFrackMan(this));
-        if (validMovement(x, y, getWorld()->directionToFrackMan(this))) {
-            moveTo(x, y);
-            m_nSquaresToMove = 0;
-            return;
-        }
-    }
-    if (getWorld()->frackManCornerRadius(this) <= 4.0 && yellThisTick()) {
+
+    if (getWorld()->frackManCornerRadius(this) <= 4.0 && getDirection()==getWorld()->directionToFrackMan(this) && yellThisTick() ) {
         getWorld()->playSound(SOUND_PROTESTER_YELL);
         getWorld()->damageFrackMan(PROTESTER_DAMAGE);
         return;
     }
-    m_nSquaresToMove--;
-    if (m_nSquaresToMove <= 0) {
-        setDirection(getValidRandomDirection());
-        m_nSquaresToMove = (rand() % 54) + 8;
+    if (getWorld()->lineOfSightWithFrackMan(this) && fm_dist >= 4.0) {
+        //getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
+
+        moveToFrackManInLineOfSight();
+        return;
     }
 
-
+    //m_nSquaresToMove--;
+    if (changeDirection()) {
+        setDirection(getValidRandomDirection());
+        //m_nSquaresToMove = (rand() % 54) + 8;
+    }
     int x = getX();
     int y = getY();
-    if (m_lastPerpendicularTurn <= 0) {
-        if (getDirection() == right || getDirection() == left) {
-            if (validMovement(x, y, up) || validMovement(x, y, down)) { //note: it seems like the value would change,
-                // but due to short circuited logic, if validmovement returns false the x and y are unchanged.
-                // the protester will also have a tendency to turn up more often (turn down for what)
-                x = getX();
-                y = getY();
-                int r = rand() % 2;
-                if (r == 0) {
-                    if (validMovement(x, y, up)) {
-                        setDirection(up);
-                        moveTo(x, y);
-                    } else if (validMovement(x, y, down)) {
-                        setDirection(down);
-                        moveTo(x, y);
-                    }
-                }
-                if (r == 1) {
-                    if (validMovement(x, y, down)) {
-                        setDirection(down);
-                        moveTo(x, y);
-                    } else {
-                        validMovement(x, y, up);
-                        setDirection(up);
-                        moveTo(x, y);
-                    }
-                }
-            } else {
-                x = getX();
-                y = getY();
-                int r = rand() % 2;
-                if (r == 0) {
-                    if (validMovement(x, y, left)) {
-                        setDirection(left);
-                        moveTo(x, y);
-                    } else if (validMovement(x, y, right)) {
-                        setDirection(right);
-                        moveTo(x, y);
-                    }
-                }
-                if (r == 1) {
-                    if (validMovement(x, y, right)) {
-                        setDirection(right);
-                        moveTo(x, y);
-                    } else if (validMovement(x, y, left)) {
-                        setDirection(left);
-                        moveTo(x, y);
-                    }
-                }
-            }
-        }
-    } else {
-        setDirection(getValidRandomDirection());
-        validMovement(x, y, getDirection());
-        moveTo(x, y);
-    }
-
-    x = getX();
-    y = getY();
-    m_nSquaresToMove = (rand() % 54) + 8;
-    m_lastPerpendicularTurn = 200;
     if (!validMovement(x, y, getDirection())) {
         m_nSquaresToMove = 0;
+    } else {
+        moveTo(x,y);
     }
+
+
+    makePerpendicularTurnIfNeeded();
+    // m_nSquaresToMove = (rand() % 54) + 8;
+    //m_lastPerpendicularTurn = 200;
+
 }
 //Dirt
 
@@ -440,21 +372,37 @@ bool Boulder::dirtOrRockBelow() {
 }
 
 bool Boulder::obstructsProtesters(int x, int y) {
-    return (fabsf(getX() - x) < SPRITE_WIDTH && fabsf(getY() - y) < SPRITE_HEIGHT) &&
-           !toBeRemoved(); //-1 to account for edge of boulder being smaller?
+    return (fabsf(getX() - x) < SPRITE_WIDTH && fabsf(getY() - y) < SPRITE_HEIGHT) && !toBeRemoved(); //-1 to account for edge of boulder being smaller?
 }
 bool FrackMan::validMovement(int &x, int &y, GraphObject::Direction dir) {
     int nextX = x;
     int nextY = y;
-    if (Actor::validMovement(nextX, nextY, dir)) {
-        x = nextX;
-        y = nextY;
-        return true;
+
+    if (!Actor::validMovement(x, y, dir)) {
+        switch(dir){
+            case up:
+                nextY = nextY +1;
+                break;
+            case down:
+                nextY = nextY-1;
+                break;
+            case left:
+                nextX = nextX -1;
+                break;
+            case right:
+                nextX = nextX + 1;
+        }
+        if (getWorld()->dirtAt(nextX, nextY)) {
+            x = nextX;
+            y = nextY;
+            return true;
+        }else
+            return false;
     }
-    return false;
+    return true;
 }
 
-bool Squirt::validMovement(int &x, int &y, GraphObject::Direction dir) {
+/*bool Squirt::validMovement(int &x, int &y, GraphObject::Direction dir) {
     int newX = x;
     int newY = y;
     if (Actor::validMovement(newX, newY, dir) && !getWorld()->dirtAt(x, y)) {
@@ -464,7 +412,7 @@ bool Squirt::validMovement(int &x, int &y, GraphObject::Direction dir) {
     } else {
         return false;
     }
-}
+}*/
 
 Sonar::Sonar(StudentWorld *sw) : Discovery(IID_SONAR, SONAR_START_X, SONAR_START_Y, sw) {
     setVisible(true);
@@ -534,7 +482,7 @@ bool Protester::yellThisTick() {
 
 }
 
-GraphObject::Direction Person::getValidRandomDirection() {
+GraphObject::Direction Protester::getValidRandomDirection() {
     //assumes that at least one of the directions is valid
     //(which is valid)
     int x = getX();
@@ -572,10 +520,11 @@ GraphObject::Direction Actor::directionTo(int x, int y) {
     return left;
 }
 
+/*
 bool Protester::validMovement(int &x, int &y, GraphObject::Direction dir) {
     int tempx = x;
     int tempy = y;
-    bool valid = Actor::validMovement(tempx, tempy, dir);
+    return Actor::validMovement(tempx, tempy, dir);
     if (getWorld()->dirtAt(tempx, tempy)) {
         return false;
     }
@@ -583,6 +532,7 @@ bool Protester::validMovement(int &x, int &y, GraphObject::Direction dir) {
     y = tempy;
     return valid;
 }
+*/
 
 Water::Water(int locX, int locY, StudentWorld *sw) : Discovery(IID_WATER_POOL, locX, locY, sw) {
     setVisible(true);
@@ -607,3 +557,171 @@ void FrackMan::addWater() {
 void Protester::stun() {
     m_stunDuration = max(50, 100 - ((getWorld()->getLevel() * 10)));
 }
+
+HardcoreProtester::HardcoreProtester(int startX, int startY, StudentWorld *sw) : Protester(IID_HARD_CORE_PROTESTER, 60, 60, sw) {
+    setTicks(max(0, 3-getWorld()->getLevel()));
+}
+
+void HardcoreProtester::doSomething() {
+    if (toBeRemoved())
+        return;
+    if (getHealth() <= 0) {
+        moveToSpawn();
+        return;
+    }
+    if (stunned()) {
+        return;
+    }
+    //GraphObject::Direction fm_dir = getWorld()->frackManDirection();]
+    if (!actThisTick()) {
+        return;
+    }
+    float fm_dist = getWorld()->frackManCornerRadius(this);
+    if (getWorld()->lineOfSightWithFrackMan(this) && fm_dist >= 4.0) {
+        moveToFrackManInLineOfSight();
+        return;
+    }
+    if (getWorld()->frackManCornerRadius(this) <= 4.0 && yellThisTick()) {
+        getWorld()->playSound(SOUND_PROTESTER_YELL);
+        getWorld()->damageFrackMan(PROTESTER_DAMAGE);
+        return;
+    }
+    //m_nSquaresToMove--;
+    if (changeDirection()) {
+        setDirection(getValidRandomDirection());
+        //m_nSquaresToMove = (rand() % 54) + 8;
+    }
+
+
+    int x = getX();
+    int y = getY();
+    makePerpendicularTurnIfNeeded();
+    if (!validMovement(x, y, getDirection()))
+        setDirection(getValidRandomDirection());
+
+    x = getX();
+    y = getY();
+   // m_nSquaresToMove = (rand() % 54) + 8;
+    //m_lastPerpendicularTurn = 200;
+    //if (!validMovement(x, y, getDirection())) {
+    //    m_nSquaresToMove = 0;
+    //}
+}
+
+void Protester::moveToSpawn() {
+    int x = getX();
+    int y = getY();
+    if (x != 60 || y != 60) {
+        GraphObject:
+        Direction dir = getWorld()->leaveOilField(x, y);
+        setDirection(dir);
+        moveTo(x, y);
+        getWorld()->setGameStatText("XY: " + std::to_string(x) + std::to_string(y));
+    } else {
+        markRemoved();
+    }
+}
+
+void Protester::moveToFrackManInLineOfSight() {
+    int x = getX();
+    int y = getY();
+    setDirection(getWorld()->directionToFrackMan(this));
+    if (validMovement(x, y, getWorld()->directionToFrackMan(this))) {
+        moveTo(x, y);
+        m_nSquaresToMove = 0;
+    }
+}
+
+void Protester::getNewPerpendicularTurn() {
+    int x = getX();
+    int y = getY();
+    if (getDirection() == right || getDirection() == left) {
+        if (validMovement(x, y, up) || validMovement(x, y, down)) { //note: it seems like the value would change,
+            // but due to short circuited logic, if validmovement returns false the x and y are unchanged.
+            // the protester will also have a tendency to turn up more often (turn down for what)
+            x = getX();
+            y = getY();
+            int r = rand() % 2;
+            if (r == 0) {
+                if (validMovement(x, y, up)) {
+                    setDirection(up);
+                    moveTo(x, y);
+                } else if (validMovement(x, y, down)) {
+                    setDirection(down);
+                    moveTo(x, y);
+                }
+            }
+            if (r == 1) {
+                if (validMovement(x, y, down)) {
+                    setDirection(down);
+                    moveTo(x, y);
+                } else {
+                    validMovement(x, y, up);
+                    setDirection(up);
+                    moveTo(x, y);
+                }
+            }
+        } else {
+            x = getX();
+            y = getY();
+            int r = rand() % 2;
+            if (r == 0) {
+                if (validMovement(x, y, left)) {
+                    setDirection(left);
+                    moveTo(x, y);
+                } else if (validMovement(x, y, right)) {
+                    setDirection(right);
+                    moveTo(x, y);
+                }
+            }
+            if (r == 1) {
+                if (validMovement(x, y, right)) {
+                    setDirection(right);
+                    moveTo(x, y);
+                } else if (validMovement(x, y, left)) {
+                    setDirection(left);
+                    moveTo(x, y);
+                }
+            }
+        }
+    }
+}
+
+bool Protester::stunned() {
+    if (m_stunDuration > 0){
+        m_stunDuration--;
+        return true;
+    }
+    return false;
+}
+
+bool Protester::changeDirection() {
+    if (m_nSquaresToMove <=0){
+        m_nSquaresToMove = (rand() % 54) + 8;
+        return true;
+    }
+    m_nSquaresToMove--;
+    return false;
+}
+
+void Protester::makePerpendicularTurnIfNeeded() {
+    int x = getX();
+    int y = getY();
+    //GraphObject::Direction dir = getValidRandomDirection();
+    if (m_lastPerpendicularTurn <= 0) {
+        getNewPerpendicularTurn();
+        m_lastPerpendicularTurn = 200;
+    } else {
+        m_lastPerpendicularTurn--;
+        //if (validMovement(x, y, dir)) {
+          //  setDirection(dir);
+           // moveTo(x, y);
+    }
+}
+
+
+void Actor::setTicksUntil(int ticks) {
+    this->m_ticksUntilAction = ticks;
+}
+
+

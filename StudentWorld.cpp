@@ -1,6 +1,6 @@
 #include "StudentWorld.h"
 #include "Actor.h"
-
+#include <time.h>
 
 using namespace std;
 
@@ -11,6 +11,7 @@ GameWorld *createStudentWorld(string assetDir) {
 // Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
 StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), m_dirtDeleted(false), m_level(0),
                                                    m_sonarPresent(false), initialized(false) {
+    srand(time(NULL));
     //add to vector m_objects
     //set up dirt
 }
@@ -43,7 +44,9 @@ int StudentWorld::init() {
     addRandomDiscoveries<Boulder>(numBoulders);
     addRandomDiscoveries<GoldNugget>(numGold);
     Protester *prot = new Protester(IID_PROTESTER, 60, 60, this);
+    Protester *hcprot = new HardcoreProtester(60,60, this);
     m_objects.push_back(prot);
+    m_objects.push_back(hcprot);
     mapCurrentPaths(59, 60, 60, 60);
     initialized = true;
     return GWSTATUS_CONTINUE_GAME;
@@ -268,8 +271,7 @@ void StudentWorld::damageFrackMan(int damage) {
     m_fm->hurt(damage);
 }
 
-bool StudentWorld::lineOfSightWithFrackMan(
-        Person *person) { //todo: fix to include indirect line of sight p.42 Footnotes
+bool StudentWorld::lineOfSightWithFrackMan(Person *person) { //todo: fix to include indirect line of sight p.42 Footnotes
     int x = max(m_fm->getX(), person->getX());
     int y = max(m_fm->getY(), person->getY());
     int otherx = min(m_fm->getX(), person->getX());
@@ -277,7 +279,7 @@ bool StudentWorld::lineOfSightWithFrackMan(
     if (abs(person->getY() - m_fm->getY()) <= 4) {
         for (int j = 0; j < 4; j++) {
             for (int i = 0; i < x; i++) {
-                if (!obstructionAt(otherx + i, othery + j)) {
+                if (!obstructionAt(otherx + i, othery + j) && !dirtAt(otherx + i, othery + j)) {
                     return true;
                 }
             }
@@ -286,7 +288,7 @@ bool StudentWorld::lineOfSightWithFrackMan(
     if (abs(person->getX() - m_fm->getX()) <= 4) {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < y; j++) {
-                if (!obstructionAt(otherx + i, othery + j)) {
+                if (!obstructionAt(otherx + i, othery + j) && !dirtAt(otherx + i, othery + j)) {
                     return true;
                 }
             }
