@@ -9,7 +9,7 @@
  */
 Actor::Actor(int imageID, int startX, int startY, GraphObject::Direction startDir, float size, unsigned int depth,
              StudentWorld *sw)
-        : GraphObject(imageID, startX, startY, startDir, size, depth), m_world(sw), m_toBeRemoved(false),
+        : GraphObject(imageID, startX, startY, startDir, size, depth), m_world(sw), m_toBeRemoved(false), m_value(0),
           m_ticksBetweenActions(30),
           m_ticksUntilAction(30) {
 
@@ -36,24 +36,6 @@ bool Actor::toBeRemoved() {
     return m_toBeRemoved;
 }
 
-float Actor::minDistanceFrom(int x, int y) {
-    //return min distance from all corners
-    //NEVER CALL THIS ON A SMALL OBJECT LIKE DIRT.
-    float minAny = 256; //very large, impossible number, seeing as the largest it could possibly be is about 10.
-    for (int i = 0; i <= SPRITE_WIDTH; i++) {
-        for (int j = 0; j <= SPRITE_HEIGHT; j++) {
-            float minThisTime;
-            float distRTop = sqrtf(sqr(getX() + SPRITE_WIDTH - x + i) + sqr(getY() + SPRITE_HEIGHT - y + j));
-            float distRBot = sqrtf(sqr(getX() + SPRITE_WIDTH - x + i) + sqr(getY() - y + j));
-            float distLTop = sqrtf(sqr(getX() - x + i) + sqr(getY() + SPRITE_HEIGHT - y + j));
-            float distLBot = sqrtf(sqr(getX() - x + i) + sqr(getY() - y + j));
-            minThisTime = min(min(distLBot, distRBot), min(distLTop, distRTop));
-            if (minAny > minThisTime)
-                minAny = minThisTime;
-        }
-    }
-    return minAny;
-}
 
 
 bool Actor::actThisTick() {
@@ -95,10 +77,16 @@ void Person::hurt(int damage) {
     m_hitPoints -= damage;
 }
 
-void Protester::hurt(int damage) {
+void Protester::hurt(int damage, bool play = true) {
+    \
+    if (play) {
     getWorld()->playSound(SOUND_PROTESTER_ANNOYED);
+    }
     stun();
     Person::hurt(damage);
+    if (getHealth() <= 0) {
+        getWorld()->killedProtester();
+    }
 }
 
 void FrackMan::hurt(int damage) {
@@ -163,10 +151,11 @@ void FrackMan::doSomething() {
     int newY = getY();
     getWorld()->deleteDirtAt(newX, newY);
     if (!getWorld()->getKey(keyp)) {//If I don't get a keypress, then nothing's going on
-        getWorld()->clearDead(); //and I can delete all the garbage I've been saving up
+        getWorld()->clearDead();
+        //and I can delete all the garbage I've been saving up
         return; //and quit early.
     }
-    GraphObject::Direction dir;
+    GraphObject::Direction dir = getDirection();
     switch (keyp) { //select the direction we wish to go. Also set the frackman's direction.
         case KEY_PRESS_LEFT:
             dir = GraphObject::left;
@@ -182,6 +171,7 @@ void FrackMan::doSomething() {
             break;
         case KEY_PRESS_SPACE: {
             if (m_water > 0) {
+                m_water--;
                 validMovement(newX, newY, getDirection());
                 Squirt *squirt = new Squirt(newX, newY, getDirection(), getWorld());
                 getWorld()->insertActor(squirt);
@@ -200,6 +190,13 @@ void FrackMan::doSomething() {
                 getWorld()->playSound(SOUND_SONAR);
             }
             return;
+        case KEY_PRESS_TAB:
+            if (m_gold > 0) {
+                m_gold--;
+                GoldNugget *bribe = new GoldNugget(getX(), getY(), getWorld(), true);
+                getWorld()->insertActor(bribe);
+            }
+            break;
         default:
             dir = GraphObject::none;
             break; //???how??? did you get here???
@@ -232,6 +229,7 @@ Protester::Protester(int imageId, int startX, int startY, StudentWorld *sw)
         : Person(imageId, startX, startY, PROTESTER_START_DIR, PROTESTER_START_HITPOINTS, sw), m_ticksBetweenYells(0),
           m_lastPerpendicularTurn(0), m_first_run(true) {
     setVisible(true);
+    setValue(REGULAR_PROTESTER_VALUE);
     int ticksBetweenMoves = max(0, 3 - getWorld()->getLevel() / 4);
     this->setTicks(ticksBetweenMoves);
 }
@@ -240,14 +238,14 @@ void Protester::doSomething() {
     if (toBeRemoved())
         return;
     if (getHealth() <= 0) {
-        int x = getX();
-        int y = getY();
-        if (x != 60 || y != 60) {
-            GraphObject:
+        if (getX() != 60 || getY() != 60) {
+            int x = getX();
+            int y = getY();
+            //GraphObject:
             Direction dir = getWorld()->leaveOilField(x, y);
             setDirection(dir);
             moveTo(x, y);
-            getWorld()->setGameStatText("XY: " + std::to_string(x) + std::to_string(y));
+            //getWorld()->setGameStatText("XY: " + std::to_string(x) + std::to_string(y));
         } else {
             markRemoved();
         }
@@ -271,6 +269,7 @@ void Protester::doSomething() {
     if (getWorld()->lineOfSightWithFrackMan(this) && fm_dist >= 4.0) {
         int x = getX();
         int y = getY();
+
         setDirection(getWorld()->directionToFrackMan(this));
         if (validMovement(x, y, getWorld()->directionToFrackMan(this))) {
             moveTo(x, y);
@@ -434,13 +433,13 @@ void Boulder::doSomething() {
 }
 
 bool Boulder::dirtOrRockBelow() {
-    return getWorld()->dirtAt(getX(), getY() - 1);
+    return getWorld()->dirtAt(getX(), getY() - 1) || getY() <= 0;
     //       return true; //if the boul}
     //return false;
 }
 
 bool Boulder::obstructsProtesters(int x, int y) {
-    return (fabsf(getX() - x) < SPRITE_WIDTH && fabsf(getY() - y) < SPRITE_HEIGHT) &&
+    return (abs(getX() - x) < SPRITE_WIDTH && abs(getY() - y) < SPRITE_HEIGHT) &&
            !toBeRemoved(); //-1 to account for edge of boulder being smaller?
 }
 bool FrackMan::validMovement(int &x, int &y, GraphObject::Direction dir) {
@@ -469,6 +468,7 @@ bool Squirt::validMovement(int &x, int &y, GraphObject::Direction dir) {
 Sonar::Sonar(StudentWorld *sw) : Discovery(IID_SONAR, SONAR_START_X, SONAR_START_Y, sw) {
     setVisible(true);
     setTicks(min(100, 300 - 100 * (getWorld()->getLevel())));
+    setValue(SONAR_VALUE);
 }
 
 void Sonar::doSomething() {
@@ -487,8 +487,8 @@ void Actor::setTicks(int ticks) {
 
 bool Discovery::pickedUp() {
     if (getWorld()->frackManCornerRadius(this) <= 3.0 && !toBeRemoved()) {
-        this->markRemoved();
         getWorld()->playSound(SOUND_GOT_GOODIE);
+        this->markRemoved();
         return true;
     }
     if (getWorld()->frackManCornerRadius(this) <= 4.0 && !toBeRemoved()) {
@@ -503,12 +503,14 @@ void FrackMan::addSonar() {
     m_sonar++;
 }
 
-int FrackMan::getSonar() {
-    return m_sonar;
-}
 
-GoldNugget::GoldNugget(int locX, int locY, StudentWorld *sw) : Discovery(IID_GOLD, locX, locY, sw) {
-    setVisible(false);
+GoldNugget::GoldNugget(int locX, int locY, StudentWorld *sw, bool isBribe) : Discovery(IID_GOLD, locX, locY, sw),
+                                                                             m_isBribe(isBribe) {
+    setVisible(isBribe);
+    if (isBribe) {
+        setTicks(100);
+    }
+    setValue(GOLD_VALUE);
 }
 
 void GoldNugget::doSomething() {
@@ -516,6 +518,12 @@ void GoldNugget::doSomething() {
         return; //well if it's dead I don't really expect a lot out of it.
     if (!m_isBribe && this->pickedUp())
         getWorld()->gotGold();
+    if (m_isBribe) {
+        if (actThisTick()) {
+            //getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
+            markRemoved();
+        }
+    }
 }
 
 void FrackMan::addGold() {
@@ -534,7 +542,7 @@ bool Protester::yellThisTick() {
 
 }
 
-GraphObject::Direction Person::getValidRandomDirection() {
+GraphObject::Direction Protester::getValidRandomDirection() {
     //assumes that at least one of the directions is valid
     //(which is valid)
     int x = getX();
@@ -568,9 +576,6 @@ int Actor::getHealth() {
     return 0;
 }
 
-GraphObject::Direction Actor::directionTo(int x, int y) {
-    return left;
-}
 
 bool Protester::validMovement(int &x, int &y, GraphObject::Direction dir) {
     int tempx = x;
@@ -606,4 +611,228 @@ void FrackMan::addWater() {
 
 void Protester::stun() {
     m_stunDuration = max(50, 100 - ((getWorld()->getLevel() * 10)));
+}
+
+int FrackMan::amtWater() {
+    return m_water;
+}
+
+int FrackMan::amtGold() {
+    return m_gold;
+}
+
+int FrackMan::amtSonar() {
+    return m_sonar;
+}
+
+void Actor::setValue(int val) {
+    m_value = val;
+}
+
+HardcoreProtester::HardcoreProtester(int imageId, int startX, int startY, StudentWorld *sw) : Protester(
+        IID_HARD_CORE_PROTESTER, 60, 60, sw) {
+    setVisible(true);
+    setValue(HARDCORE_PROTESTER_VALUE);
+}
+
+void HardcoreProtester::doSomething() {
+    if (toBeRemoved())
+        return;
+    if (getHealth() <= 0) {
+        int x = getX();
+        int y = getY();
+        if (x != 60 || y != 60) {
+            //GraphObject:
+            Direction dir = getWorld()->leaveOilField(x, y);
+            setDirection(dir);
+            moveTo(x, y);
+            //getWorld()->setGameStatText("XY: " + std::to_string(x) + std::to_string(y));
+        } else {
+            markRemoved();
+        }
+        return;
+    }
+    if (stunned()) {
+        return;
+    }
+    //GraphObject::Direction fm_dir = getWorld()->frackManDirection();]
+    if (!actThisTick()) {
+        return;
+    }
+
+    if (getWorld()->lineOfSightWithFrackMan(this) && getWorld()->frackManCornerRadius(this) >= 4.0) {
+        int x = getX();
+        int y = getY();
+
+        setDirection(getWorld()->directionToFrackMan(this));
+        if (validMovement(x, y, getWorld()->directionToFrackMan(this))) {
+            moveTo(x, y);
+            resetMoveForward();
+            return;
+        }
+    }
+    float fm_dist = getWorld()->frackManCornerRadius(this);
+    if (getWorld()->pathingDistanceFromFrackMan(getX(), getY()) <= (16 + getWorld()->getLevel() * 2)) {
+        int x = getX();
+        int y = getY();
+        GraphObject::Direction dir = getWorld()->getFrackMan(x, y);
+        setDirection(dir);
+        moveTo(x, y);
+    }
+    if (getWorld()->lineOfSightWithFrackMan(this) && fm_dist >= 4.0) {
+        int x = getX();
+        int y = getY();
+        setDirection(getWorld()->directionToFrackMan(this));
+        if (validMovement(x, y, getWorld()->directionToFrackMan(this))) {
+            moveTo(x, y);
+            resetMoveForward();
+            return;
+        }
+    }
+    if (getWorld()->frackManCornerRadius(this) <= 4.0 && yellThisTick()) {
+        getWorld()->playSound(SOUND_PROTESTER_YELL);
+        getWorld()->damageFrackMan(PROTESTER_DAMAGE);
+        return;
+    }
+    if (moveForward()) {
+        setDirection(getValidRandomDirection());
+    }
+
+
+    int x = getX();
+    int y = getY();
+    if (makePerpendicularTurn()) {
+        if (getDirection() == right || getDirection() == left) {
+            if (validMovement(x, y, up) || validMovement(x, y, down)) { //note: it seems like the value would change,
+                // but due to short circuited logic, if validmovement returns false the x and y are unchanged.
+                // the protester will also have a tendency to turn up more often (turn down for what)
+                x = getX();
+                y = getY();
+                int r = rand() % 2;
+                if (r == 0) {
+                    if (validMovement(x, y, up)) {
+                        setDirection(up);
+                        moveTo(x, y);
+                    } else if (validMovement(x, y, down)) {
+                        setDirection(down);
+                        moveTo(x, y);
+                    }
+                }
+                if (r == 1) {
+                    if (validMovement(x, y, down)) {
+                        setDirection(down);
+                        moveTo(x, y);
+                    } else {
+                        validMovement(x, y, up);
+                        setDirection(up);
+                        moveTo(x, y);
+                    }
+                }
+            } else {
+                x = getX();
+                y = getY();
+                int r = rand() % 2;
+                if (r == 0) {
+                    if (validMovement(x, y, left)) {
+                        setDirection(left);
+                        moveTo(x, y);
+                    } else if (validMovement(x, y, right)) {
+                        setDirection(right);
+                        moveTo(x, y);
+                    }
+                }
+                if (r == 1) {
+                    if (validMovement(x, y, right)) {
+                        setDirection(right);
+                        moveTo(x, y);
+                    } else if (validMovement(x, y, left)) {
+                        setDirection(left);
+                        moveTo(x, y);
+                    }
+                }
+            }
+        }
+    } else {
+        setDirection(getValidRandomDirection());
+        validMovement(x, y, getDirection());
+        moveTo(x, y);
+    }
+
+    x = getX();
+    y = getY();
+    if (!validMovement(x, y, getDirection())) {
+        resetMoveForward();
+    }
+}
+
+bool Protester::stunned() {
+    bool stunned = m_stunDuration > 0;
+    if (m_stunDuration > 0) {
+        m_stunDuration--;
+    }
+    return stunned;
+}
+
+
+bool Protester::makePerpendicularTurn() {
+    m_lastPerpendicularTurn--;
+    if (m_lastPerpendicularTurn <= 0) {
+        m_lastPerpendicularTurn = 200;
+        return true;
+    }
+    return false;
+}
+
+
+bool Protester::moveForward() {
+    m_nSquaresToMove--;
+    if (m_nSquaresToMove <= 0) {
+        m_nSquaresToMove = (rand() % 54) + 8;
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+void Protester::resetMoveForward() {
+    m_nSquaresToMove = 0;
+}
+
+void Protester::markRemoved() {
+    getWorld()->increaseScore(REGULAR_PROTESTER_VALUE);
+    getWorld()->playSound(SOUND_PROTESTER_GIVE_UP);
+    Actor::markRemoved();
+}
+
+void HardcoreProtester::markRemoved() {
+    getWorld()->increaseScore(HARDCORE_PROTESTER_VALUE);
+    getWorld()->playSound(SOUND_PROTESTER_GIVE_UP);
+    Actor::markRemoved();
+}
+
+bool GoldNugget::isBribe() {
+    return m_isBribe;
+}
+
+bool OilBarrel::pickedUp() {
+    if (getWorld()->frackManCornerRadius(this) <= 3.0 && !toBeRemoved()) {
+        getWorld()->playSound(SOUND_FOUND_OIL);
+        this->markRemoved();
+        return true;
+    }
+    if (getWorld()->frackManCornerRadius(this) <= 4.0 && !toBeRemoved()) {
+        setVisible(true);
+        return false;
+    }
+    return false;
+
+}
+
+Protester::~Protester() {
+
+}
+
+Person::~Person() {
+
 }

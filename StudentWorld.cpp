@@ -1,3 +1,7 @@
+#include <sstream>
+#include <iomanip>
+#include <queue>
+//#include <bits/stl_queue.h>
 #include "StudentWorld.h"
 #include "Actor.h"
 
@@ -18,7 +22,8 @@ StudentWorld::StudentWorld(std::string assetDir) : GameWorld(assetDir), m_dirtDe
 int StudentWorld::init() {
     for (int i = 0; i < 64; i++) {
         for (int j = 0; j < 64; j++) {
-            m_distanceMaps[i][j] = 8192000; //has_dirt
+            m_distanceMaps[i][j] = 4096000; //has_dirt
+            m_frackManDistanceMap[i][j] = 4096000;
         }
     }
     m_distanceMaps[60][60] = 0; //EXIT STAGE RIGHT, PROTESTER
@@ -29,22 +34,25 @@ int StudentWorld::init() {
     for (int i = 0; i < VIEW_WIDTH; i++) { //fill the entire world with dirt (me_irl)
         for (int j = 0; j < VIEW_HEIGHT; j++) {
             m_dirt[i][j] = nullptr;
+            //m_distanceMaps[i][j] = 4096000;
             if ((j < (VIEW_HEIGHT - SPRITE_HEIGHT) &&
                  (i < MINESHAFT_LEFT_WALL_COL || i > MINESHAFT_RIGHT_WALL_COL))) { //except the column in the centre
                 m_dirt[i][j] = new Dirt(i, j, this);
-                m_distanceMaps[i][j] = 4096000; //no dirt, but unmapped.
+                //m_distanceMaps[i][j] = 0; //no dirt, but unmapped.
             }
             if (j < MINESHAFT_BOTTOM_ROW && !m_dirt[i][j]) { //except the bottom of the middle column.
                 m_dirt[i][j] = new Dirt(i, j, this);
             }
         }
     }
+    addProtesterinTicks = max(25, 200 - getLevel());
     addRandomDiscoveries<OilBarrel>(m_barrelsRemaining);
     addRandomDiscoveries<Boulder>(numBoulders);
     addRandomDiscoveries<GoldNugget>(numGold);
     Protester *prot = new Protester(IID_PROTESTER, 60, 60, this);
     m_objects.push_back(prot);
-    mapCurrentPaths(59, 60, 60, 60);
+    m_numProtesters = 1;
+    mapCurrentPaths(m_distanceMaps, 59, 60, 60, 60);
     initialized = true;
     return GWSTATUS_CONTINUE_GAME;
 }
@@ -55,6 +63,7 @@ StudentWorld::~StudentWorld() { //erase all the dirt. et cetera.
 }
 
 void StudentWorld::cleanUp() { //erase all the dirt. Erase all the items. Erase the FrackMan
+    clearDead();
     delete m_fm;
     m_fm = nullptr;
     while (!m_objects.empty()) {
@@ -68,7 +77,6 @@ void StudentWorld::cleanUp() { //erase all the dirt. Erase all the items. Erase 
             m_dirt[i][j] = nullptr;
         }
     }
-    clearDead();
 }
 
 void StudentWorld::insertActor(Actor *toBeAdded) {
@@ -76,18 +84,58 @@ void StudentWorld::insertActor(Actor *toBeAdded) {
         this->m_objects.push_back(toBeAdded);
 }
 int StudentWorld::move() {
-
+    if (m_barrelsRemaining == 0) {
+        playSound(SOUND_FINISHED_LEVEL);
+        return GWSTATUS_FINISHED_LEVEL;
+    }
+    if (m_fm->getHealth() <= 0) {
+        decLives();
+        playSound(SOUND_PLAYER_GIVE_UP);
+        return GWSTATUS_PLAYER_DIED;
+    }
+    m_fm->doSomething();
 
     // This code is here merely to allow the game to build, run, and terminate after you hit enter a few times.
     // Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
-    // decLives();
-    if (m_barrelsRemaining == 0)
-        return GWSTATUS_FINISHED_LEVEL;
-    if (m_fm->getHealth() <= 0)
-        return GWSTATUS_PLAYER_DIED;
-    m_fm->doSomething();
     for (std::list<Actor *>::iterator i = m_objects.begin(); i != m_objects.end(); ++i) {
         (*i)->doSomething();
+        GoldNugget *gold = dynamic_cast<GoldNugget *>(*i);
+        if (gold) {
+            if (gold->isBribe() && !gold->toBeRemoved()) {
+                for (Actor *a: m_objects) {
+                    if (cornerRadius(a, gold) > 4.0) {
+                        continue;
+                    }
+                    HardcoreProtester *hp = dynamic_cast<HardcoreProtester *>(a);
+                    if (hp) {
+                        hp->stun();
+                        increaseScore(50);
+                        playSound(SOUND_PROTESTER_FOUND_GOLD);
+                        gold->markRemoved();
+                    }
+                    Protester *p = dynamic_cast<Protester *>(a);
+                    if (!hp && p) {
+                        p->hurt(p->getHealth(), false);
+                        playSound(SOUND_PROTESTER_FOUND_GOLD);
+                        increaseScore(25);
+                        gold->markRemoved();
+                    }
+                    //gold->markRemoved();//I'm so sorry, I stayed up all night doing this code.
+                }
+            }
+        }
+    }
+    addProtesterinTicks--;
+    if (addProtesterinTicks <= 0 && (m_numProtesters < min(15, 2 + getLevel() * 1.5))) {
+        addProtesterinTicks = max(25, 200 - getLevel());
+        if (rand() % 100 < min(90, getLevel() * 10 + 30)) {
+            HardcoreProtester *hp = new HardcoreProtester(IID_HARD_CORE_PROTESTER, 60, 60, this);
+            m_objects.push_back(hp);
+        } else {
+            Protester *prot = new Protester(IID_PROTESTER, 60, 60, this);
+            m_objects.push_back(prot);
+        }
+        m_numProtesters++;
     }
     int goodie_randnum = (rand() % 100) + 1;
     if (((getLevel() * 25 + 300) + 1) % goodie_randnum == 0) {
@@ -108,12 +156,22 @@ int StudentWorld::move() {
     /*if (getLives()<=0)
         return GWSTATUS_PLAYER_DIED;
     else*/
-
+    if (m_barrelsRemaining == 0) {
+        playSound(SOUND_FINISHED_LEVEL);
+        return GWSTATUS_FINISHED_LEVEL;
+    }
+    if (m_fm->getHealth() <= 0) {
+        playSound(SOUND_PLAYER_GIVE_UP);
+        return GWSTATUS_PLAYER_DIED;
+    }
+    setGameStatText(setDisplayText());
     return GWSTATUS_CONTINUE_GAME;
 }
 
 void StudentWorld::clearDead() {
     //delete all the objects marked as dead.
+    mapCurrentPaths(m_frackManDistanceMap, min(m_fm->getX() - 1, 0), m_fm->getY(), max(m_fm->getX() + 1, 0),
+                    m_fm->getY());
     std::list<Actor *>::iterator i = m_objects.begin();
     while (i != m_objects.end()) {
         //Actor *tmp = *i;
@@ -154,14 +212,13 @@ void StudentWorld::deleteDirtAt(int x, int y, bool play) { //this can be made 4x
                 IntPair toDelete(i, j);
                 dirtToBeDeleted.push(toDelete);
                 dirt_deleted = true;
-                if (!play) {
-                    m_distanceMaps[i][j] = 8192000;
-                }
-                if (dirtAt(i, j) && m_distanceMaps[i][j] == 8192000) {
-                    m_distanceMaps[i][j] = minAround(x, y) + 1;
-                }
+                mapCurrentPaths(m_distanceMaps, 59, 60, 60, 60);
+
             }
         }
+    }
+    if (!play) {
+        mapCurrentPaths(m_distanceMaps, 59, 60, 60, 60);
     }
     m_dirtDeleted = true;
     if (dirt_deleted && play) {
@@ -170,17 +227,34 @@ void StudentWorld::deleteDirtAt(int x, int y, bool play) { //this can be made 4x
 }
 
 std::string StudentWorld::setDisplayText(void) {
-    return std::string("");
+    std::ostringstream oss;
+    int healthPercent = m_fm->getHealth() * 10;
+    oss.fill('0');
+    oss << "Scr: " << setw(6) << getScore();
+    oss.fill(' ');
+    oss << "  " << "Lvl: " << setw(2) << static_cast<int> (getLevel()) << "  " << "Lives: " << setw(1) << getLives() <<
+    "  " << "Hlth: " << setw(3) << healthPercent << "%" << "  " << "Wtr: " << setw(2) << m_fm->amtWater() << "  " <<
+    "Gld: " << setw(2) << m_fm->amtGold() << "  " << "Sonar: " << setw(2) << m_fm->amtSonar() << "  " << "Oil Left: " <<
+    setw(2) << m_barrelsRemaining;
+
+    return oss.str();
     //return std::string()
     //return __cxx11::basic_string<char, char_traits<_CharT>, allocator<_CharT>>();
 }
 
 bool StudentWorld::dirtAt(int x, int y) {
     //return false;
+    if (x < 0 || y < 0 || x > 60 || y > 60)
+        return true;
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-            if (m_dirt[x + i][y + j] != nullptr /*&& !m_dirt[x+i][y+j]->toBeRemoved()*/) {
-                return true;
+            //if (x+i > 63 || y+j > 63){
+            //    return true; //why u tryna go there
+            //}
+            if (m_dirt[x + i][y + j] != nullptr) {
+                if (!m_dirt[x + i][y + j]->toBeRemoved()) {
+                    return true;
+                }
             }
         }
     }
@@ -200,12 +274,16 @@ bool StudentWorld::obstructionAt(int x, int y) {
 //  return m_dirt[x][y]!= nullptr;
 //}
 float StudentWorld::frackManCornerRadius(Actor *actor) {
-    return sqrtf(sqr(fabsf(actor->getX() - m_fm->getX())) + sqr(fabsf(actor->getY() - m_fm->getY())));
+    return cornerRadius(m_fm, actor);
 }
 
+float StudentWorld::cornerRadius(Actor *actor1, Actor *actor2) {
+    return sqrtf(sqr(abs(actor1->getX() - actor2->getX())) + sqr(abs(actor1->getY() - actor2->getY())));
+}
 void StudentWorld::gotOil() {
     m_oil++;
     m_barrelsRemaining--;
+    playSound(SOUND_FOUND_OIL);
     increaseScore(BARREL_VALUE);
 }
 
@@ -224,9 +302,6 @@ StudentWorld::IntPair StudentWorld::getRandomActorLocation() {
     return IntPair(boulderX, boulderY);
 }
 
-int StudentWorld::amtOfOil() {
-    return m_oil;
-}
 
 
 void StudentWorld::sonarDespawned(bool byFrackMan) {
@@ -239,7 +314,7 @@ void StudentWorld::sonarDespawned(bool byFrackMan) {
 
 void StudentWorld::sonarPulse(int x, int y) {
     for (std::list<Actor *>::iterator i = m_objects.begin(); i != m_objects.end(); ++i) {
-        if (frackManCornerRadius(*i) - 12 <= 0.5) {
+        if (frackManCornerRadius(*i) - 12 <= 0.5 && !(*i)->toBeRemoved()) {
             (*i)->setVisible(true);
         }
     }
@@ -315,15 +390,24 @@ GraphObject::Direction StudentWorld::directionToFrackMan(Person *person) {
 }
 
 void StudentWorld::damageOneActorAt(int x, int y, Squirt *squirt) {
+    bool killedProtester = false;
     for (Actor *obj : m_objects) {
-        if (abs(obj->getX() - x) <= 3.0 && abs(obj->getY() - y <= 3.0)) { //todo:euclidian distance
+        if (cornerRadius(obj, squirt) <= 4.0) { //todone:euclidian distance
             obj->hurt(SQUIRT_DAMAGE);
-            if (dynamic_cast<Protester *>(obj) && !dynamic_cast<Squirt *> (obj)) {
-                squirt->markRemoved();
-                return;
+            Protester *prot = dynamic_cast<Protester *>(obj);
+            if (prot && !dynamic_cast<Squirt *> (obj) && !(squirt == obj)) {
+                playSound(SOUND_PROTESTER_ANNOYED);
+                killedProtester = true;
+            }
+            if (prot) {
+                prot->stun();
+                playSound(SOUND_PROTESTER_ANNOYED);
             }
         }
     }
+
+    if (killedProtester)
+        squirt->markRemoved();
 }
 
 void StudentWorld::damageAllActorsAt(int x, int y) {
@@ -331,31 +415,40 @@ void StudentWorld::damageAllActorsAt(int x, int y) {
         if ((std::abs(x - obj->getX()) <= 3.0) && (std::abs(y - obj->getY()) <= 3.0) &&
             obj->getHealth() != 0) { //todo: same as above
             obj->hurt(obj->getHealth());
+            if (dynamic_cast<Protester *>(obj)) {
+                increaseScore(500);
+                m_numProtesters--;
+            }
         }
         if ((abs(x - m_fm->getX()) <= 3.0) && (abs(y - m_fm->getY()) <= 3.0)) {
             m_fm->hurt(m_fm->getHealth());
         }
     }
-    this->mapCurrentPaths(59, 60, 60, 60);
+    this->mapCurrentPaths(m_distanceMaps, 59, 60, 60, 60);
 }
 
 GraphObject::Direction StudentWorld::leaveOilField(int &x, int &y) {
-    GraphObject::Direction dir = minAroundDirection(x, y);
+    GraphObject::Direction dir = minAroundDirection(m_distanceMaps, x, y);
     m_fm->validMovement(x, y, dir);
     return dir;
 }
 
-GraphObject::Direction StudentWorld::minAroundDirection(int x, int y) {
+GraphObject::Direction StudentWorld::getFrackMan(int &x, int &y) {
+    GraphObject::Direction dir = minAroundDirection(m_frackManDistanceMap, x, y);
+    m_fm->validMovement(x, y, dir);
+}
+
+GraphObject::Direction StudentWorld::minAroundDirection(int arr[64][64], int x, int y) {
     int min = 9000001;
     GraphObject::Direction mindir = GraphObject::none;
     int tempx = x;
     int tempy = y;
     if (m_fm->validMovement(tempx, tempy, GraphObject::down)) { //get the smallest distance stored in the thing
 
-        if (m_distanceMaps[tempx][tempy] < min) {
+        if (arr[tempx][tempy] < min) {
             if (tempx == x && tempy == y);
             else {
-                min = m_distanceMaps[tempx][tempy];
+                min = arr[tempx][tempy];
                 mindir = GraphObject::down;
             }
         }
@@ -363,21 +456,20 @@ GraphObject::Direction StudentWorld::minAroundDirection(int x, int y) {
         tempy = y;
     }
     if (m_fm->validMovement(tempx, tempy, GraphObject::up)) {
-        if (m_distanceMaps[tempx][tempy] < min) {
+        if (arr[tempx][tempy] < min) {
             if (!(tempx == x && tempy == y)) {
-                min = m_distanceMaps[tempx][tempy];
+                min = arr[tempx][tempy];
                 mindir = GraphObject::up;
             }
             tempx = x;
             tempy = y;
-
         }
     }
     if (m_fm->validMovement(tempx, tempy, GraphObject::left)) {
-        if (m_distanceMaps[tempx][tempy] < min) {
+        if (arr[tempx][tempy] < min) {
             if (tempx == x && tempy == y);
             else {
-                min = m_distanceMaps[tempx][tempy];
+                min = arr[tempx][tempy];
                 mindir = GraphObject::left;
             }
         }
@@ -385,10 +477,9 @@ GraphObject::Direction StudentWorld::minAroundDirection(int x, int y) {
         tempy = y;
     }
     if (m_fm->validMovement(tempx, tempy, GraphObject::right)) {
-        if (m_distanceMaps[tempx][tempy] < min) {
+        if (arr[tempx][tempy] < min) {
             if (tempx == x && tempy == y);
             else {
-                min = m_distanceMaps[tempx][tempy];
                 mindir = GraphObject::right;
             }
         }
@@ -401,42 +492,54 @@ GraphObject::Direction StudentWorld::minAroundDirection(int x, int y) {
 
 }
 
-int StudentWorld::minAround(int x, int y) {
+int StudentWorld::minAround(int arr[64][64], int x, int y) {
     int tmpx = x;
     int tmpy = y;
-    if (minAroundDirection(x, y) != GraphObject::none)
-        m_fm->validMovement(x, y, minAroundDirection(x, y));
-    return m_distanceMaps[tmpx][tmpy];
+    if (minAroundDirection(arr, x, y) != GraphObject::none)
+        m_fm->validMovement(x, y, minAroundDirection(arr, x, y));
+    return arr[tmpx][tmpy];
 }
 
 
-void StudentWorld::mapCurrentPaths(int x, int y, int fromX, int fromY) {
-    //if (x==60 && y==60) {
-    //    m_distanceMaps[60][60] = 0;
-    //    return;
+void StudentWorld::mapCurrentPaths(int arr[64][64], int x, int y, int fromX, int fromY) {
 
-    if (x < 0 || y < 0 || x > 62 || y > 62) {
+    if (x < 1 || y < 1 || x > 62 || y > 62) {
         return;
     }
     //}
-    if (m_distanceMaps[x][y] < 4096000)
+    if (arr[x][y] != 4096000)
         return;
 
-    if (x == 60 && y == 60) {
-        m_distanceMaps[x][y] = 0;
+    if (x == fromX && y == fromY) {
+        arr[x][y] = 0;
         return;
     }
-    m_distanceMaps[x][y] = m_distanceMaps[fromX][fromY] + 1;
-    mapCurrentPaths(x - 1, y, x, y);
-    mapCurrentPaths(x + 1, y, x, y);
-    mapCurrentPaths(x, y - 1, x, y);
-    mapCurrentPaths(x, y + 1, x, y);
+    if (arr[fromX][fromY] != 4096000) {
+        arr[x][y] = arr[fromX][fromY] + 1;
+    }
+    mapCurrentPaths(arr, x - 1, y, x, y);
+    mapCurrentPaths(arr, x + 1, y, x, y);
+    mapCurrentPaths(arr, x, y - 1, x, y);
+    mapCurrentPaths(arr, x, y + 1, x, y);
 }
 
+//void StudentWorld::map
 StudentWorld::IntPair StudentWorld::getRandomMineshaftCoord() {
     IntPair ip = IntPair(rand() % 64, rand() % 60);
     while (dirtAt(ip.i, ip.j)) {
         ip = IntPair(rand() % 64, rand() % 60); //todo: make this not shitty
     }
     return ip;
+}
+
+//StudentWorld::IntPair StudentWorld::aStar(StudentWorld::IntPair begin, StudentWorld::IntPair end) {
+
+//  return StudentWorld::IntPair(0, 0);
+//}
+int StudentWorld::pathingDistanceFromFrackMan(int x, int y) {
+    return m_frackManDistanceMap[x][y];
+}
+
+void StudentWorld::killedProtester() {
+    m_numProtesters--;
 }

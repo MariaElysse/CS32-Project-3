@@ -45,7 +45,6 @@ public:
 
     void deleteDirtAt(int x, int y, bool playSound = true);
 
-    void clearDead();
 
     void insertActor(Actor *toBeAdded);
 
@@ -76,17 +75,25 @@ public:
 
     void damageFrackMan(int damage);
 
+    void killedProtester();
     GraphObject::Direction directionToFrackMan(Person *person);
     void gotOil();
 
     GraphObject::Direction leaveOilField(int &x, int &y);
-    int amtOfOil();
+
+    GraphObject::Direction getFrackMan(int &x, int &y);
+
 
     void gotGold();
 
     void gotWater();
     void sonarDespawned(bool byFrackMan);
 
+    int pathingDistanceFromFrackMan(int x, int y);
+
+    void clearDead();
+
+protected:
 
 private:
     struct IntPair {
@@ -96,14 +103,20 @@ private:
         int j;
     };
 
+    float cornerRadius(Actor *a1, Actor *a2);
+
     StudentWorld::IntPair getRandomMineshaftCoord();
     std::string setDisplayText(void);
 
+    IntPair aStar(IntPair begin, IntPair end);
 
     StudentWorld::IntPair getRandomActorLocation();
 
+    int addProtesterinTicks;
     template<class T>
     void addRandomDiscoveries(int num);
+
+    int m_numProtesters;
     //int m_score;
     int m_level;
     int m_barrelsRemaining;
@@ -111,17 +124,18 @@ private:
     FrackMan *m_fm;
     Dirt *m_dirt[VIEW_HEIGHT][VIEW_WIDTH];
     int m_distanceMaps[VIEW_HEIGHT][VIEW_WIDTH];
+    int m_frackManDistanceMap[64][64];
     bool m_dirtDeleted;
     int m_oil;
     bool m_sonarPresent;
     std::stack<IntPair> dirtToBeDeleted; //[i][j] values for the dirt that is to be deleted the next time we get a chance.
     bool initialized;
 
-    GraphObject::Direction minAroundDirection(int x, int y);
+    GraphObject::Direction minAroundDirection(int arr[64][64], int x, int y);
 
-    int minAround(int x, int y);
+    int minAround(int arr[64][64], int x, int y);
 
-    void mapCurrentPaths(int x, int y, int fromX, int fromY);
+    void mapCurrentPaths(int arr[64][64], int x, int y, int fromX, int fromY);
 
 };
 

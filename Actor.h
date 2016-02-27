@@ -23,6 +23,8 @@ const GraphObject::Direction PROTESTER_START_DIR = GraphObject::left;
 const int PROTESTER_START_HITPOINTS = 5;
 const int PROTESTER_DAMAGE = 2;
 const int HARDCORE_PROTESTER_HITPOINTS = 20;
+const int REGULAR_PROTESTER_VALUE = 100;
+const int HARDCORE_PROTESTER_VALUE = 250;
 
 const GraphObject::Direction DIRT_DIR = GraphObject::right;
 const float DIRT_SIZE = 0.25;
@@ -47,13 +49,10 @@ class Actor : public GraphObject {
 public:
     Actor(int imageID, int startX, int startY, Direction startDir, float size, unsigned int depth, StudentWorld *sw);
 
-    GraphObject::Direction directionTo(int x, int y);
-    virtual float minDistanceFrom(int x, int y);
     virtual void markRemoved();
     virtual bool toBeRemoved();
     virtual ~Actor();
     virtual void doSomething() = 0;
-
     virtual int getHealth();
     virtual bool obstructsProtesters(int x, int y);
     StudentWorld *getWorld(void);
@@ -66,23 +65,26 @@ public:
 
     virtual void hurt(int damage);
 
+    void setValue(int val);
 private:
     int m_ticksUntilAction;
+
     int m_ticksBetweenActions;
     StudentWorld *m_world;
     bool m_toBeRemoved;
+    int m_value;
 };
 
 class Person : public Actor {
 public:
     Person(int imageId, int startX, int startY, Direction startDir, int hitPoints, StudentWorld *sw);
 
-    virtual bool obstructsProtesters(int x, int y);
+    bool obstructsProtesters(int x, int y);
 
-    virtual int getHealth();
+    int getHealth();
     virtual void hurt(int damage);
 
-    GraphObject::Direction getValidRandomDirection();
+    virtual ~Person();
 
 private:
     int m_hitPoints;
@@ -93,13 +95,17 @@ public:
     FrackMan(StudentWorld *sw);
     bool validMovement(int &x, int &y, GraphObject::Direction dir);
     void doSomething();
-
     void addSonar();
 
     void addGold();
 
     void addWater();
-    int getSonar();
+
+    int amtWater();
+
+    int amtGold();
+
+    int amtSonar();
 
     void hurt(int damage);
 private:
@@ -113,16 +119,30 @@ class Protester : public Person {
 public:
     Protester(int imageId, int startX, int startY, StudentWorld *sw);
 
-    void doSomething();
+    GraphObject::Direction getValidRandomDirection();
 
-    void hurt(int damage);
+    virtual void doSomething();
+
+    void hurt(int damage, bool play);
 
     bool validMovement(int &x, int &y, GraphObject::Direction dir);
 
     void stun();
 
-private:
+    bool stunned();
+
+    bool makePerpendicularTurn();
+
+    bool moveForward();
+
+    void resetMoveForward();
     bool yellThisTick();
+
+    virtual void markRemoved();
+
+    virtual ~Protester();
+
+private:
 
     bool m_hardcore;
     int m_nSquaresToMove;
@@ -135,15 +155,17 @@ private:
 class HardcoreProtester : public Protester {
 public:
     HardcoreProtester(int imageId, int startX, int startY, StudentWorld *sw);
-
     void doSomething();
+
+    void markRemoved();
+    //void doSomething();
 };
 
 class Discovery : public Actor { //oil, gold, SONAR kit, Water.
 public:
     Discovery(int imageId, int locX, int locY, StudentWorld *sw);
 
-    bool pickedUp();
+    virtual bool pickedUp();
     virtual void doSomething() = 0;
 
     virtual ~Discovery() { };
@@ -155,6 +177,8 @@ class OilBarrel : public Discovery {
 public:
     OilBarrel(int locX, int locY, StudentWorld *sw);
     void doSomething();
+
+    bool pickedUp();
 };
 
 class Dirt : public Actor {
@@ -165,6 +189,7 @@ public:
     bool obstructsProtesters(int x, int y);
     ~Dirt();
 };
+
 
 class Squirt : public Actor {
 public:
@@ -194,10 +219,11 @@ private:
 
 class GoldNugget : public Discovery {
 public:
-    GoldNugget(int locX, int locY, StudentWorld *sw);
+    GoldNugget(int locX, int locY, StudentWorld *sw, bool isBribe = false);
 
     void doSomething();
 
+    bool isBribe();
 private:
     bool m_isBribe;
 };
