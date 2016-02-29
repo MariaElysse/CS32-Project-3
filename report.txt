@@ -1,0 +1,290 @@
+PROJECT #3
+----------
+
+StudentWorld Public Functions.
+
+StudentWorld(std::string assetDir);
+Constructor.
+
+~StudentWorld();
+Destructor. If the init() function has been run,destroying the StudentWorld object runs the clenaup() function.
+virtual int init();
+Initialises the objects in the StudentWorld. Sets the arrays used to map the movement of the protesters back to base, as well at the Hardcore Protester'stracking.
+Creates a frackman.
+creates a world of dirt.
+Adds random discoveries and items: Oil, Gold, Boulders.
+Adds an initial protester.
+virtual int move();
+
+runs the doSomething() function for all actors managed.
+manages the logic of when to add protesters, water, radar, etc.
+Stuns and kills protesters when necessary.
+Creates spawned goodies (radar, water) when required.
+Checks to ensure that the oil has not all been collected, and the frackman still has health remaining. If theses are not the case, ends the level in the appropriate way.
+
+virtual void cleanUp();
+deletes all dynamically allocated variables.
+
+void deleteDirtAt(int x, int y, bool playSound = true);
+Marks dirt within a 4x4 square, denoted by its left bottom corner, to be deleted and plays the dirt digging sound if required.
+
+
+void insertActor(Actor *toBeAdded);
+inserts an actor pointer into the data structure used by the StudentWorld.
+
+void sonarPulse(int x, int y);
+fires a sonar pulse that reveals the objects in a 12 unit radius. Iterates through the list of objects, finding any that are withing 12 units of the frackamn and reveals them.
+bool obstructionAt(int x, int y);
+determines whether it is possible for a basic Person to move to a particular 4x4 block. (i.e. the block does not contain dirt or boulders.)
+bool dirtAt(int x, int y);
+Determines whether there is dirt in the 4x4 block denoted by its bottom right corner.
+void damageOneActorAt(int x, int y, Squirt *squirt);
+Carries out the damaging effect of the Squirt, if necessary, and deletes it afterward, if necessary.
+void damageAllActorsAt(int x, int y);
+Carries out the damaging effect of the boulder while falling.
+float frackManCornerRadius(Actor *actor);
+Finds the absolute diagonal distancebetween the FrackMan and a given Actor.
+GraphObject::Direction frackManDirection();
+Gives the frackman's direction.
+bool lineOfSightWithFrackMan(Person *person);
+determines whether the person given can see the frackman (i.e. there is an unbroken straight line of sight not impeded by dirt or boulders)
+void damageFrackMan(int damage);
+deals a set amount of damage to the frackman.
+void killedProtester();
+decrements the numer of protesters known to the StudentWorld.
+GraphObject::Direction directionToFrackMan(Person *person);
+the direction to face if you want to walk toward the frackman, and are in a line of sight.
+void gotOil();
+indicate to the studentworld that you have found oil.
+
+GraphObject::Direction leaveOilField(int &x, int &y);
+changes the x or y coordinates to reflect a step that a protester would make to leave the oilfield.
+GraphObject::Direction getFrackMan(int &x, int &y);
+changes x and y to reflect a step that a (hardcore) protester would make to get closer to the frackMan 
+
+void gotGold();
+indicate to the studentWorld that you have found gold.
+void gotWater();
+indicate to the studentworld that you have found water.
+void sonarDespawned(bool byFrackMan);
+inform the studentworld how the SONAR pickup despawned, either by being picked up or disappearing back into the ether.
+int pathingDistanceFromFrackMan(int x, int y);
+gives the distance following a valid path of the frackman from the given xy coordinate.
+void clearDead();
+clears all actors and dirt marked as dead. Only run in a tick where the frackman does nothing.
+
+
+Actor:
+Parent class of all the actors.
+Actor::Actor 
+constructor.
+virt Actor::obstructsProtesters(x, y) 
+if the Actor will obstruct protesters at that location. Virtual because some Actors will not block protesters.
+
+virt Actor::toBeRemoved
+if the ACtor is to be removed on the next free tick. Virtual because some Actors die in different ways, e.g. with sounds.
+
+virt ~Actor() 
+virtual destructor, required.
+
+virt int getHealth() :
+different Actors deal with health differently. Some have no need for it.
+
+virt bool ValidMovement : some Actors can move through dirt, and some can't.
+
+bool actThisTick():
+    the only differences in tick management between actors is the time between ticks, which is stored as a variable.
+
+void setTicks():
+sets the number of ticks to wait between actions. May change depending on the situation, however the implementation is identical on all Actors.
+
+getWorld() returns a pointer to the StudentWorld that cretes all Actor objects. Implemented identically everywhere.
+
+virtual hurt(int damage)
+deals the given amount of damage to the Actor. May be overridden as actors die and are hurt in different ways.
+
+void setValue() sets the Actor's point value on death, so that the  inherited markDead function can update the StudentWorld on how many points you've earned.
+
+Person::
+Person() Constructor.
+bool ObstructsProtesters() //overrides Actor::ObstructsProtesters. no Person obstructs protesters, so always returns false.
+int getHealth : all Persons implement Health in the same way, just the values are different.
+
+virtual void hurt(int damage) : overrides Actor::hurt. The persons (FrackMan, Protesters of both types) are hurt in different ways.  
+
+FrackMan::
+FrackMan: Constructor.
+
+bool validMovement: determines (and changes x and y to suit) a valid move that the frackamn can make (different from other classes, that can't move into dirt)
+
+void DoSomething(): accepts input from the user and collects goodies etc.
+addSonar() : adds 1 sonar charge to his stockpile.
+addGold(): adds 1 bribe to his stockpile.
+addWater(): adds 1 charge of water gun ammo to his stockpile
+amtWater() - gets how much water he has.
+amtGOld() gets how mch gold he has
+amtSonar() gets how many sonar pulses he has left.
+
+Protester::
+Protester: Constructs the protester.
+GetValidRandomDirection: gets a valid random direction for the protester's navigation.
+virtual doSomething: does something. overrridden by the HardCore class.
+void hurt (int) damage the protester, making him yell.
+bool ValidMovement(x, y, dir) if one can move in that direction, change x and y to suit, and return true, else return false.Same for hardcore protester.
+void stun() causes stunned() to return true for m_stunDuration ticks.
+stunned(): Interaction as above.
+makePerpendicularTurn() : make a perpendicular turn if necessary (re: the spec).
+resetMoveForward() : decide whether to change direction as per spec.
+yellThisTick() : so they shut up once in a while and don't yell me to death (as per spec)
+virtual void markRemoved() : if it's to be deleted. makes a noise.
+HardCoreProtester::
+HardCoreProtester:Constructor.
+void Dosomething() : it's a child class and probably not going to be inherited from. In fact, I only made it a separate class from Protester because everyone else seemed to be doing that, and it made it easier to get help debugging. None of its qualities seemed to warrant being in a separate class.
+void markremoved() : mark the object as removed to be deleted later on in a free tick.
+
+Discovery::
+Discovery: Constructor.
+virtual pickedUp(): all the child classes should inherit and change this method.
+pure-virtual doSomething()  - it's naturally an abstract class, and just a Discovery can't do anything in particular on its own.
+
+virtual bool obstructsProtesters() : if the object blocks the pathing of protesters (and potentially the frackMan) Every discovery may need to override this, though none of them in this project did.
+
+OilBarrel::
+OilBarrel: Constructor.
+doSomething () non-virtual. No child classes, no need.
+
+bool pickedUp() manages the noisemaking and informing the studentworld that a barrel has been collected.
+
+Dirt::
+Dirt: Constructor.
+doSomething() does nothing.
+obstructsProtesters: in its small area.
+
+Squirt::
+Squirt: constructor.
+validMovement: anywhere that isn't a wall or boulder, or edge.
+doSomething() -> damage protesters, or keep going until time runs out.
+
+Boulder::
+Boulder: constructor.
+doSomething() : does nothing unless all the dirt is taken away  from under it, or it hits something, as per spec.
+
+empty destructor.
+
+GoldNugget:: (note that I chose to keep both the bribe nuggets and natural nuggets as the same class. This resulted in no more complexity that the method of using two separate classes. I regret not doing the same for Protesters.)
+
+doSomething(): either stay there until picked up by the frackman, or sink away into the dirt after a few ticks.
+isBribe() : determines who can pick it up.
+
+Sonar:: 
+Sonar : constructor.
+doSomething : disappear after a while.
+
+Water:: 
+Water: Constructor
+DoSomething() : disappear after a while.
+
+
+KNOWN BUGS::
+------------
+
+Pathfinding is awful. It's fast, but the protestersget confused by spaces that are too small for them to fit, rather than findinga way around. This could be fixed by using the validMovement() function for mapping, but I tried doing that and it was incredibly complex.
+I think I've caught all the segmentation faults, but some may remain. Quite unlikely though.
+The boulders have a slightly different (square) collision space with other items. The reference implementation allws you to walk over the corner of the boulder - mine does not.
+In my game, the Protesters only yell that they give up when they're leaving the arena. I have no idea what the reference implementation does, so I can't say whether this was correct or not. I like to think it's an interesting spin on it at least.
+In my game, when the protesters leave the arena, they always move upward then rightward (this isn't because I coded it so simplistically, there's something wrong with the pathfinding.)
+The Regular Protesters as the spec describes were a little too stupid for my tastes, so I let them navigate around obstacles when chasing the FrackMan with line-of-sight. The game is much more fun this way, and if I didn't say that in this report, you would never have known. In fact, it would be very inconvenient to prove that I even did it, as it's only noticeable in certain edge cases. Even I don't know if I did that correctly. Enough internal monologue.
+
+TESTING::
+---------
+
+Deletions and accesses were tested using valgrind, and I used repetitive playtests to determine if the protesters acted correctly.
+
+Dirt: Valgrind and GDB, as well as plain old running the game may times, clearing all the dirt, etc, to see if all the edges, center etc. are erased properly, and also block paths properly. The system of mark and delete caused numerous bugs, as "deleted" (made invisible) but not yet freed dirt had a tendency to get involved in things it shouldn't have. 
+
+Water: Comparing the rate of spawning with the sample game, to see if it was about similar. Also, leaving the game to run for a long time and observing if any water puddles appeared outside of mineshafts. Also, testing with the "F" key to ensure that water puddles survived the correct number of ticks before going away.
+
+Sonar: Similar to water, testing the times that it appears, ensuring that it didn't appear the same time as a water, etc.
+
+GoldNugget: Testing in varoius situations to see if it could be picked back up by the FrackMAn, to see if it truly did disappear after a time, etc. I also had to ensure that the FrackMan didn't turn when the nugget was dropped, and other small visual errors like that. I also had to test to ensure that a gold nugget would never end up outside of dirt, if it was natural, and that more thn one protester couldn't be affected by it, if it was a bribe.
+
+Boulder::
+
+Boulders were implemented pretty early, and easily gave the most trouble out of all the things I implemented early. I had to ensure that they fell only when they should, that they made the sound, make sure the delay was correct, ensure that they could actually destroy more than one protester, as well as myself, ensure that dying due to suicide by rockslide didn't actually increase my score, and many more. This could only be done by playtesting really, and my Protesters, before a couple days ago, had a tendency to be extremely stupid.
+
+OilBarrel: I had to ensure that the correct number of barrels was always placed, that they end up inside the dirt and not in the mineshaft, that they reveal themselves at the proper time, etc.
+
+Discovery(s) in general: I had to ensure that they spawned where they should, and revealed themselves when they should.
+
+(Hardcore) Protester: 
+This depended a lot on playtesting and randomly encountering bugs, as the random behaviour of the protesters does not translate well to testing. The bug with their leaving the oilfield though, extremely easy to test for.
+
+I also had to ensure (especially for he protesters and frackman) that their functions didn't have any side effects that might cause bugs elsewhere, or segmentation faults as they try to randomly walk over the edge.
+
+FrackMan::
+I had to test: his buttons, his capabilities, his health, how the level ending worked, where he could walk, if he bonked himself with a rock, if that worked correctly, if he could dig correctly (he can't, around rocks), nd minor cosmetic issues, like he would turn sometimes if he dropped a gold nugget for protesters to pick up, or would not make the correct sounds.
+
+Person::
+Ensure that the ValidDirection function always gave valid directions. Ensure that the correct functions were virtual, so as to prevent undefined behavior.
+
+Actor:: ensure that th eproper functions were virtual or pure virtual. Ensure that the virtual destructors were written. Ensure that the functions would be useful in a more generalised way, and are bug-free, byt tracing.
+
+--------TONS OF CONSTANTS (even though I started using magic numbers again when the deadline drew nearer -----------------------
+
+
+StudentWorld::
+init(): ensure that everything was properly initialized, the 2 arrays for navigation, the array for dirt, the frackman, the other objects, ensuring that there's no chance of an invalid read, etc.
+move(): There was some confusion on my part about the fact that the test for the FrackMan's death/finishing of the level needed to happen at both the start and end of the tick to show the screens in between properly. This was solved. Very little of the actual functionality of the game was managed in move(), allowing for easily finding the source of bugs, as most incorrect behavior was isolated in the classes that were behaving badly.
+cleanup() : ensure that no memory is leaked, and no invalid deletes are performed.
+Miscellaneous functions:
+InsertActor: ensure that it only every gets Actor pointers.
+clearDead() : ensure that it would be quick, and test it in different situations - with nothing or a lot to delete.
+deleteDirtAt: ensure that it behaved in a standard and reliable way in all situations, even when referring to outside the grid.
+setDisplayText() : ensure that the string result it produces is correct according to the spec, and that it formats the string correctly.
+dirtAt: ensure it hasreliable functioning in all cases, even when going outside the grid. 
+ObstructionAt: Ensuer that it always functioned in a standard way, even if one used invalid numbers, and didn't cause errors.
+CornerRadius/FrackManCornerRadius - testing was mainy through the collisions occurring tin the game, ensuring that entities collided correctly.
+gotOil: ensure that it updated the counter variables, score and played the correct sound when called.
+gotWater:ensure that it updates the score correctly, and modified the frackaman correctly.
+getRandomActorLocation: ensure that it returned valid locations for the goodies to be.
+SonarDespawned: ensure that it updated the correct variables, and informexd the Frackman.
+SonarPulse: test (using cout) that it revealed the correct Goodies when activated.
+gotGold: ensure that it updated the frackman.
+addRandomDIscoveries: Ensure that the function was only called with classes that caould use the templated constructor it uses.
+LineOfSightWithFrackaman: Play-testing with each of the cardinal directions, and in different instances of obliqueness.
+damageFrackman() : ensure that it informs the FrackMan of his damage.and that the sound is played.
+LineOfSightWithFrackMan() : play test, with all the cardinal directions and obliquenesses.
+directionToFrackMan: Ensure that it had the expected behavior in all cases where it would be called.
+DamageOneActorAt: Ensure that the squirts worked properly, damaging (despite what the function is called) all the protesters in a vicinity, then destroying itself.
+
+DamageAllACtorsAt: ensuring it damages all Protesters in the vicinity, then does *not* destroy itself.
+leaveOilField() : so far, kill the protester inside a horizontal mine shaft. They just walk over the dirt like nobody's business..
+
+getFrackMan() : ensure that the Hardcore Protesters can locate the FrackMan, and after a small amount of time, move to his location despite not having a direct line of sight.
+minAroundDirection: return the direction around the coordinate given that has the lowest total distance to (the end). this function operates both on the array of distances from the protesters' spawn point, and the array of distances from the frackman. If this/the flood filling algorithm worked properly, they would move according to the requirements. 
+minAround() : depends entirely on MinAroundDirection, so ensre that finction is not buggy. Test that it returns the correct values for the minimum value around the coordinate.
+MapCurrentPaths: ensure that (using cout) it produces the expected result of a flood-filling shortest path algorithm.
+GetRandomMineshaftCoord: prove that it would not return a coordinate that can be consiudered dirt or boulder.
+pathingDistanceFromFrackMan = it's a one statement function.Its accuracy depends on how well MapCurrentPths is implemented.
+KilledProtester: Ensure that the m_numProtesters is used and reset when it should be.
+
+
+ ___________________________________
+< Barrels! Now that is interesting! >
+ -----------------------------------
+      \                    / \  //\
+       \    |\___/|      /   \//  \\
+            /0  0  \__  /    //  | \ \
+           /     /  \/_/    //   |  \  \
+           @_^_@'/   \/_   //    |   \   \
+           //_^_/     \/_ //     |    \    \
+        ( //) |        \///      |     \     \
+      ( / /) _|_ /   )  //       |      \     _\
+    ( // /) '/,_ _ _/  ( ; -.    |    _ _\.-~        .-~~~^-.
+  (( / / )) ,-{        _      `-.|.-~-.           .~         `.
+ (( // / ))  '/\      /                 ~-. _ .-~      .-~^-.  \
+ (( /// ))      `.   {            }                   /      \  \
+  (( / ))     .----~-.\        \-'                 .~         \  `. \^-.
+             ///.----..>        \             _ -~             `.  ^-`  ^-_
+               ///-._ _ _ _ _ _ _}^ - - - - ~                     ~-- ,.-~
+                                                                  /.-~
