@@ -289,7 +289,7 @@ KilledProtester: Ensure that the m_numProtesters is used and reset when it shoul
                ///-._ _ _ _ _ _ _}^ - - - - ~                     ~-- ,.-~
                                                                   /.-~
  ___________________________________
-< Quack! >
+< Barrels! Now that is interesting! >
  -----------------------------------
       \                    / \  //\
        \    |\___/|      /   \//  \\
